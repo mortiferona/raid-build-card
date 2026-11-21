@@ -216,7 +216,8 @@ const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet"
 const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
 const SETS_HINT="";
 const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
-function drawStars(){const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
+function refreshBlessNote(){const b=document.getElementById('bInfo');if(b)b.textContent=`Level = red stars of the champion (${hero.stars||'?'}★)`;}
+function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
 document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
 document.addEventListener('DOMContentLoaded',()=>{drawStars();
   document.getElementById('hName').addEventListener('input',e=>hero.name=e.target.value.trim());
@@ -543,6 +544,16 @@ async function readChampDetails(img){
 }
 function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
   if(top===null)return 0; let runs=0,prev=false; for(let x=x0;x<x1;x++){let on=false;for(let y=top;y<top+4;y++){const [r,g,b]=px(x,y);if(r>200&&g>140&&b<100){on=true;break;}} if(on&&!prev)runs++;prev=on;} return Math.min(runs,6);}
+async function heroFromHeader(img,from){
+  const {head,stars}=prep(img);
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const txt=(await worker.recognize(head)).data.text;
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
+  const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
+  if(!hero.name) setHero({name:m[1].trim(),lvl:m[2],stars},from);
+  else if(!hero.stars&&stars){hero.stars=stars;drawStars();}
+}
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
   relic.name=(await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
@@ -554,7 +565,7 @@ async function processRelic(img){
   relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').trim();
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
-  await readChampDetails(img);
+  await readChampDetails(img); await heroFromHeader(img,'Relic');
   document.getElementById('rDrop').style.display='none'; document.getElementById('rErr').style.display='none';
   document.getElementById('rView').style.display='flex'; document.getElementById('rImg').src=relic.img;
   {const fc={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'}[relic.rarity]||'#2a3448'; const ri=document.getElementById('rImg'); ri.style.border='3px solid '+fc; ri.style.boxShadow='0 0 12px '+fc+'88';}
@@ -566,10 +577,10 @@ async function processBlessing(img){
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   bless.name=(await worker.recognize(crop(img,1670,1000,230,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  bless.img=cropURL(img,1700,788,175,196); await readChampDetails(img);
+  bless.img=cropURL(img,1700,788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
-  document.getElementById('bInfo').textContent=`Level = red stars of the champion (${hero.stars||'?'}★)`;
+  refreshBlessNote();
   setBadgeId('bBadge','ok','read ✓'); document.getElementById('bpanel').classList.add('filled');
 }
 function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
