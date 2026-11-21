@@ -133,6 +133,15 @@ input[type=file]{display:none}
 .card .rn{font-family:Cardo,serif;font-size:26px;color:#7fe0ec}.card .myth{display:inline-block;color:#fff;font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px;margin:6px 0}
 .card .rs{display:flex;gap:8px;margin-top:6px}.card .rs div{background:#1b2333;border-radius:8px;padding:6px 10px;font-size:13px;color:#8c97ae;text-align:center}.card .rs b{display:block;color:#5fd16a;font-size:17px}
 .card .rd{font-size:15px;line-height:1.5;margin-top:12px;color:#c3cad8}.card .sets{width:100%;border-radius:10px;margin-top:12px}
+.card .rpan{flex:1;display:flex;flex-direction:column}
+.card .rpan .relic img.art{width:190px;height:228px}
+.card .rpan .rn{font-size:30px}.card .rpan .rd{font-size:18px;line-height:1.65;margin:16px 0}
+.card .rpan .rs div{padding:8px 14px}.card .rpan .rs b{font-size:20px}
+.card .brow{display:flex;gap:18px;align-items:center}.card .brow img{width:96px;height:auto;display:block;flex:none}
+.card .brow .ph{width:84px;height:96px;border:1.5px dashed #3a4660;border-radius:12px}
+.card .brow .bl2{font-family:Cardo,serif;font-size:16px;color:#7f8aa3;letter-spacing:1.5px}
+.card .brow .bn{font-family:Cardo,serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:1px;line-height:1.2}
+.card .brow .bs{font-size:22px;letter-spacing:3px;margin-top:2px}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
@@ -503,7 +512,7 @@ async function processBlessing(img){
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   bless.name=(await worker.recognize(crop(img,1670,1000,230,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  bless.img=cropURL(img,1705,792,165,180); await readChampDetails(img);
+  bless.img=cropURL(img,1700,788,175,196); await readChampDetails(img);
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
   document.getElementById('bInfo').textContent=`Level = red stars of the champion (${hero.stars||'?'}★)`;
@@ -565,19 +574,20 @@ function buildCard(){
   const relicBody=relic.name?`<div class="relic"><img class="art" src="${relic.img}" style="border:3px solid ${rFrame};box-shadow:0 0 14px ${rFrame}88"><div><div class="rn">${esc(relic.name)}</div>
       ${relic.rarity?`<span class="myth" style="background:${rCol[relic.rarity]||'#555'}">${relic.rarity}</span>`:''} <span style="color:#f0cf7a">${'★'.repeat(relic.stars||0)} ${esc(relic.level||'')}</span>
       <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
-      <div class="rd">${esc(relic.desc)}</div><img class="sets" src="${relic.sets}">`:`<div class="empty"><b>Relic</b>not added yet</div>`;
-  const blessBody=bless.name?`<div class="bl"><img src="${bless.img}" style="width:74px;border:none;border-radius:0"><div><div class="n" style="color:#fff">${esc(bless.name)} ${bstars}</div><div style="font-size:13px;color:#8c97ae">Blessing</div></div></div>`
-      :`<div class="bl"><div class="ph"></div><div><div class="n">Blessing ${bstars}</div><div style="font-size:13px;color:#5d6880">not added yet</div></div></div>`;
+      <div style="flex:1;display:flex;align-items:center"><div class="rd">${esc(relic.desc)}</div></div><img class="sets" src="${relic.sets}">`:`<div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center"><b>Relic</b>not added yet</div>`;
+  const blessBody=bless.name?`<div class="brow"><img src="${bless.img}"><div><div class="bl2">Blessing</div><div class="bn">${esc(bless.name)}</div><div class="bs">${bstars}</div></div></div>`
+      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">not added yet</div><div class="bs">${bstars}</div></div></div>`;
   return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
     <div class="row2">
       <div class="panel"><div class="pt">Gear<small><span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
-      <div class="panel"><div class="pt">Relic</div>${relicBody}${blessBody}</div>
+      <div style="display:flex;flex-direction:column;gap:22px;margin-top:22px"><div class="panel rpan" style="margin-top:0"><div class="pt">Relic</div>${relicBody}</div>
+        <div class="panel" style="margin-top:0">${blessBody}</div></div>
     </div>
     <div class="row2">
       <div class="panel"><div class="pt">Total Stats${tTag}</div>${table}${tNote}</div>
-      <div class="panel"><div class="pt">Masteries${mc?`<small>${mc}</small>`:''}</div>${mBody}</div>
+      <div class="panel" style="display:flex;flex-direction:column"><div class="pt">Masteries${mc?`<small>${mc}</small>`:''}</div><div style="flex:1;display:flex;flex-direction:column;justify-content:center">${mBody}</div></div>
     </div>
     <div class="foot"><span>Raid: Shadow Legends</span><span>${esc(name)} · build card</span></div></div>`;
 }
