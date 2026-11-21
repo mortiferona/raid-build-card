@@ -216,7 +216,7 @@ const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet"
 const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
 const SETS_HINT="";
 const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
-function refreshBlessNote(){const b=document.getElementById('bInfo');if(b)b.textContent=`Level = red stars of the champion (${hero.stars||'?'}★)`;}
+function refreshBlessNote(){const b=document.getElementById('bInfo');if(!b)return;b.innerHTML=hero.stars?`<span style="color:#ff3b3b;font-size:20px;letter-spacing:3px">${'★'.repeat(hero.stars)}</span>`:'<span style="color:#7f8aa3">stars come from the champion screenshots</span>';}
 function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
 document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
 document.addEventListener('DOMContentLoaded',()=>{drawStars();
