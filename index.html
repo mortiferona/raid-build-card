@@ -13,7 +13,13 @@ body{background:#0b0f16;color:#d9dee8;font-family:Inter,system-ui,sans-serif;min
  background:radial-gradient(1000px 500px at 10% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 500px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
 .wrap{max-width:1300px;margin:0 auto;padding:28px 20px 100px}
 h1{font-family:Cardo,serif;font-size:40px;color:#f3e4bd;letter-spacing:1.5px}
-.sub{color:#8c97ae;margin-top:6px;font-size:15px}
+.sub{color:#8c97ae;margin-top:14px;font-size:15px}
+.myname{display:inline-flex;align-items:center;gap:12px;padding:4px 18px 6px;margin-right:10px;border:2px solid #e0452f;border-radius:8px;
+ color:#ffd9d2;letter-spacing:4px;background:linear-gradient(180deg,rgba(120,20,15,.75),rgba(50,8,6,.85));
+ box-shadow:0 0 0 1px rgba(255,140,110,.35) inset,0 0 18px rgba(224,69,47,.55),0 0 42px rgba(224,69,47,.25);text-shadow:0 0 10px rgba(255,90,70,.8);position:relative;vertical-align:middle}
+.myname::before,.myname::after{content:"";position:absolute;left:10px;right:10px;height:1px;background:linear-gradient(90deg,transparent,#ff8a70,transparent)}
+.myname::before{top:3px}.myname::after{bottom:3px}
+.myname i{font-style:normal;font-size:16px;color:#ff6b55;text-shadow:0 0 8px #ff3b2b}
 .howto{margin-top:18px;padding:14px 18px;border:1px solid #2a3448;border-radius:12px;background:rgba(18,24,35,.8);font-size:14px;line-height:1.7;color:#aeb6c6}
 .howto b{color:#f0cf7a}
 .status{margin-top:14px;font-size:14px;color:#7fd3c8;min-height:20px}
@@ -149,7 +155,7 @@ input[type=file]{display:none}
 <body>
 <div class="reset"><div class="ask" id="askReset">Start over and clear everything? <button class="yes" id="yesReset">Yes, clear</button><button id="noReset">No</button></div><button class="x" id="btnReset" title="Start over">✕</button></div>
 <div class="wrap">
-  <h1><span style="color:#ff5a5a;letter-spacing:3px">FRAGILITY</span> Raid Shadow Legends Card</h1>
+  <h1><span class="myname"><i>◆</i>FRAGILITY<i>◆</i></span> Raid Shadow Legends Card</h1>
   <div class="sub">Turn your in-game screenshots into one clean build card</div>
   <div class="howto">
     In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one per item, plus the <b>Total Stats</b> screen, the <b>Masteries</b> screen, the <b>relic tab</b> and the <b>skills tab</b> (for the Blessing).<br>
