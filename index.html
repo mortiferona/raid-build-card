@@ -347,12 +347,29 @@ async function readRow(img,y){
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
 }
+const KNAME={totals:'Total Stats',masteries:'Masteries',relic:'Relic',skills:'Blessing'};
+const PNAME={t:'Total Stats',m:'Masteries',r:'Relic',b:'Blessing'};
+const PCLEAR={t:()=>clearTotals(),m:()=>clearMasteries(),r:()=>clearPanel('r',relic),b:()=>clearPanel('b',bless)};
+async function whatIs(img,kind){ const hl=highlightSlot(img); if(hl)return {slot:hl,label:hl};
+  const k=kind===undefined?await screenKind(img):kind; return k?{kind:k,label:KNAME[k]}:null; }
+function sendTo(t,img){ if(t.slot){const el=document.querySelector(`.slot[data-slot="${t.slot}"]`); if(el.classList.contains('filled'))clearSlot(el); queue.push({el,img}); badge(el,'busy','queued');}
+  else queue.push({unknown:true,img}); pump(); }
+function panelWrong(p,help,t,img){
+  const e=document.getElementById(p+'Err');
+  e.innerHTML='⚠ '+(t?`This is the <b>${t.label}</b> screenshot, not ${PNAME[p]}.<br><button class="mv">Move it to ${t.label}</button>`:help);
+  e.style.display='block'; setBadgeId(p+'Badge','bad','wrong screenshot'); document.getElementById(p+'Drop').style.display='none'; document.getElementById(p+'panel').classList.add('filled');
+  const b=e.querySelector('.mv'); if(b)b.addEventListener('click',ev=>{ev.stopPropagation();PCLEAR[p]();sendTo(t,img);});
+}
+const PHELP={t:`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`,
+  m:`This doesn't look like the <b>Masteries</b> screen. Open the champion's Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.`,
+  r:`This isn't the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.`,
+  b:`This isn't the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.`};
 async function processTotals(img){
   const tp=document.getElementById('tpanel'); setTBadge('busy','reading…'); setStatus('Reading Total Stats…');
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   const head=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
   if(!/total\s*stats/i.test(head)){ await worker.setParameters({tessedit_pageseg_mode:'6'});
-    tErr(`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`); return; }
+    panelWrong('t',PHELP.t,await whatIs(img),img); return; }
   let area=(await worker.recognize(crop(img,1525,190,350,72,2,'bw'))).data.text.replace(/\s+[vV]+\W*$/,'').replace(/[^A-Za-z' \-]/g,'').trim();
   const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
   await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -612,13 +629,9 @@ async function pump(){
       if(job.totals){ await processTotals(img); }
       else{
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
-        if(job.kindWant==='relic'||job.kindWant==='skills'){ const p=job.kindWant==='relic'?'r':'b';
-          if(kind===job.kindWant){ if(p==='r')await processRelic(img); else await processBlessing(img); }
-          else { const e=document.getElementById(p+'Err'); e.innerHTML=p==='r'?'⚠ This isn\'t the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.':'⚠ This isn\'t the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.';
-            e.style.display='block'; setBadgeId(p+'Badge','bad','wrong screenshot'); document.getElementById(p+'Drop').style.display='none'; document.getElementById(p+'panel').classList.add('filled'); } }
-        else if(job.kindWant==='masteries'){ if(kind==='masteries')processMasteries(img); else { const e=document.getElementById('mErr');
-            e.innerHTML='⚠ This doesn\'t look like the <b>Masteries</b> screen. Open the champion\'s Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.'; e.style.display='block';
-            setBadgeId('mBadge','bad','wrong screenshot'); document.getElementById('mDrop').style.display='none'; document.getElementById('mpanel').classList.add('filled'); } }
+        if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
+          if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
+          else panelWrong(p,PHELP[p],await whatIs(img,kind),img); }
         else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
         else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
         else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
@@ -640,7 +653,8 @@ async function pump(){
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
-    const bad=checkSlot(el,item,data.text,highlightSlot(img));
+    let bad=checkSlot(el,item,data.text,highlightSlot(img));
+    if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
     if(bad){ showErr(el,bad,img); }
     else { applyHero(el,ht,stars); fill(el,item,data.text); }
   }catch(err){badge(el,'warn','error');console.error(err);}
@@ -740,7 +754,7 @@ const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banne
 function checkSlot(el,item,text,hl){
   const want=el.dataset.slot;
   if(hl) return hl===want?null:{msg:`This is the <b>${hl}</b> screenshot, not ${want}.`,move:hl};
-  if(!item.set && !item.main) return {msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`};
+  if(!item.set && !item.main) return {probe:true,msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`};
   const found=Object.keys(ARMOR).find(k=>new RegExp('\\b'+k+'\\b','i').test(text));
   const isAcc=!!ACC_MAIN[want];
   if(found){
@@ -765,11 +779,12 @@ function checkSlot(el,item,text,hl){
 }
 function showErr(el,e,img){
   const box=el.querySelector('.err');
-  const targets=e.moves||(e.move?[e.move]:[]);
+  const targets=e.moveKind?[KNAME[e.moveKind]]:(e.moves||(e.move?[e.move]:[]));
   box.innerHTML='⚠ '+e.msg+(targets.length?'<br>'+targets.map(t=>`<button class="mv" data-to="${t}" style="margin-right:6px">${targets.length>1?t:'Move it to '+t}</button>`).join(''):'');
   box.style.display='block'; badge(el,'bad','wrong screenshot'); el.classList.add('filled');
   el.querySelector('.drop').style.display='none';
   box.querySelectorAll('.mv').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();
+    if(e.moveKind){ clearSlot(el); queue.push({unknown:true,img}); pump(); return; }
     const target=document.querySelector(`.slot[data-slot="${b.dataset.to}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
     queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }));
 }
