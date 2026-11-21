@@ -494,6 +494,7 @@ async function processRelic(img){
   await readChampDetails(img);
   document.getElementById('rDrop').style.display='none'; document.getElementById('rErr').style.display='none';
   document.getElementById('rView').style.display='flex'; document.getElementById('rImg').src=relic.img;
+  {const fc={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'}[relic.rarity]||'#2a3448'; const ri=document.getElementById('rImg'); ri.style.border='3px solid '+fc; ri.style.boxShadow='0 0 12px '+fc+'88';}
   document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
   document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:#5fd16a">${v}</b>`).join(' · ')}`;
   setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
@@ -559,8 +560,9 @@ function buildCard(){
   const cChips=[champ.rarity?`<span class="chip" style="border-color:${rarCol[champ.rarity]||'#2e3850'};color:${rarCol[champ.rarity]||'#d9dee8'}">${champ.rarity}</span>`:'',
     champ.affinity?`<span class="chip" style="border-color:${affCol[champ.affinity]};color:${affCol[champ.affinity]}">${champ.affinity}</span>`:'',
     champ.faction?`<span class="chip">${esc(champ.faction)}</span>`:'', champ.role?`<span class="chip">${esc(champ.role)}</span>`:''].join('');
-  const rCol={Mythical:'#e0452f',Legendary:'#d98a1f',Epic:'#a24fd0',Rare:'#2f6fd0',Uncommon:'#3a9a3a'};
-  const relicBody=relic.name?`<div class="relic"><img class="art" src="${relic.img}"><div><div class="rn">${esc(relic.name)}</div>
+  const rCol={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'};
+  const rFrame=rCol[relic.rarity]||'#2f5866';
+  const relicBody=relic.name?`<div class="relic"><img class="art" src="${relic.img}" style="border:3px solid ${rFrame};box-shadow:0 0 14px ${rFrame}88"><div><div class="rn">${esc(relic.name)}</div>
       ${relic.rarity?`<span class="myth" style="background:${rCol[relic.rarity]||'#555'}">${relic.rarity}</span>`:''} <span style="color:#f0cf7a">${'★'.repeat(relic.stars||0)} ${esc(relic.level||'')}</span>
       <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
       <div class="rd">${esc(relic.desc)}</div><img class="sets" src="${relic.sets}">`:`<div class="empty"><b>Relic</b>not added yet</div>`;
