@@ -436,8 +436,8 @@ function buildCard(){
   const has=!!totals.rows, tcolor=j=>j===1||j===9?'g':(j===0?'w':(j===10?'':'w'));
   const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>{const v=has?(totals.rows[i].cells[j]||''):'·';return `<td class="${cls(j)} ${has?tcolor(j):''}">${esc(v)}</td>`;}).join('')}</tr>`).join('')}</table>`;
   const area=(totals.area||'').trim(), noArea=!area||/no\s*area/i.test(area);
-  const headRight=has?(noArea?`<div class="ctx"><div class="l">Build</div><div class="v" style="font-size:26px">No Area Bonuses</div></div>`
-     :`<div class="ctx"><div class="l">Build for</div><div class="v">${esc(area)}</div><div class="abadge">✓ Stats include Area Bonuses</div></div>`):'';
+  const headRight=has?(noArea?`<div class="ctx"><div class="l">Area Bonuses</div><div class="v" style="color:#7f8aa3">None</div><div class="abadge" style="border-color:#3a4660;background:#1b2333;color:#8c97ae">Total Stats without area bonuses</div></div>`
+     :`<div class="ctx"><div class="l">Area Bonuses</div><div class="v">${esc(area)}</div><div class="abadge">✓ Included in Total Stats</div></div>`):'';
   const tTag=has?`<span class="sab">Showing Area Bonuses for: <b style="color:#9fe6dc">${esc(area||'No Area Selected')}</b></span>`:`<span class="sab">Area Bonuses: not added yet</span>`;
   const tNote=has?`<div style="margin-top:14px;font-size:13px;color:#7f8aa3">The total Artifact bonus includes Artifact Set bonuses, individual Artifact bonuses, and Accessory bonuses.</div>`:'';
   const mc=mast.counts?mast.counts.filter(c=>c[1]>0).map(c=>`${c[0]} ${c[1]}`).join(' · '):'';
