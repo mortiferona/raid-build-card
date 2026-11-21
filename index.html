@@ -158,9 +158,9 @@ input[type=file]{display:none}
   <h1><span class="myname"><i>◆</i>Fragility<i>◆</i></span> Raid Shadow Legends Card</h1>
   <div class="sub">Turn your in-game screenshots into one clean build card</div>
   <div class="howto">
-    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one per item, plus the <b>Total Stats</b> screen, the <b>Masteries</b> screen, the <b>relic tab</b> and the <b>skills tab</b> (for the Blessing).<br>
+    In the game, open the champion and tap each equipped item so its details window appears top-left, then take a screenshot — one per item, plus the <b>Total Stats</b> screen, the <b>Masteries</b> screen, the <b>relic tab</b> and the <b>skills tab</b> (for the Blessing).<br>
     Drop <b>all of them at once</b> in the gold box below and each goes to its place by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
-    Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
+    Any screenshot works — full screen or windowed, with or without the taskbar: the site finds the game in the picture. Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
   </div>
   <div class="hero">
     <div><div class="lbl">Champion</div><input class="hn" id="hName" placeholder="from screenshot…"></div>
@@ -297,7 +297,7 @@ function highlightSlot(img){
       for(let x=x0-q;x<x1+q;x+=2){t+=2;n+=hot(x,y0-q)+hot(x,y1+q);}
       for(let y=y0-q;y<y1+q;y+=2){t+=2;n+=hot(x0-q,y)+hot(x1+q,y);} } return n/t;});
   const order=sc.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
-  const sure=order[0][0]>0.15 && order[0][0]-order[1][0]>0.08;
+  const sure=order[0][0]>0.12 && order[0][0]-order[1][0]>0.1 && order[0][0]>2.5*order[1][0];
   return sure?SLOTS[order[0][1]]:null;
 }
 function aspectOk(img){return Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.03;}
@@ -309,7 +309,6 @@ async function handleBulk(files){
   const used={};
   for(const f of files){
     let img; try{img=await loadImg(f);}catch(e){continue;}
-    if(!aspectOk(img))aspectNote(img,f.name);
     const slot=highlightSlot(img);
     const tag=document.createElement('span');
     if(!slot){ tag.textContent=`… ${f.name}: checking`; queue.push({unknown:true,img,tag,name:f.name}); }
@@ -328,6 +327,48 @@ async function handleBulk(files){
   z.addEventListener('dragleave',()=>z.classList.remove('drag'));
   z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
 })();
+/* ---------- find the game inside any screenshot (taskbar, window borders, smaller window) ---------- */
+const REFWORDS={"rate":[[105,173],[1524,917],[105,237],[100,656]],"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363],[336,320]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352],[231,992],[524,992],[915,992]],"storage":[[1025,356]],"equipped":[[238,378],[328,408],[1629,224]],"bonus":[[126,406],[322,992]],"total":[[1664,702],[1850,320],[149,992]],"stats":[[1735,702],[194,320]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"showing":[[1224,228]],"basic":[[132,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320],[1738,222]],"guardians":[[984,334]],"ignore":[[76,918]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"offense":[[330,150]],"defense":[[960,150],[1250,162]],"support":[[1590,150]],"info":[[1278,208]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]]};
+async function locateGame(img,upForce,bin){
+  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):1);
+  const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  if(bin){const d=g.getImageData(0,0,c.width,c.height),p=d.data;for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11,v=l>170?0:255;p[i]=p[i+1]=p[i+2]=v;}g.putImageData(d,0,0);}
+  await worker.setParameters({tessedit_pageseg_mode:'11'});
+  const {data}=await worker.recognize(c);
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const O=(data.words||[]).map(w=>({t:w.text.toLowerCase().replace(/[^a-z]/g,''),x:(w.bbox.x0+w.bbox.x1)/2/up,y:(w.bbox.y0+w.bbox.y1)/2/up}))
+    .filter(o=>REFWORDS[o.t]).slice(0,80);
+  if(O.length<3)return null;
+  let best=null;
+  const score=(s,tx,ty)=>{let n=0,res=0;const tol=16*Math.max(s,0.5);
+    for(const o of O){let m=1e9;for(const [rx,ry] of REFWORDS[o.t]){const d=Math.hypot(o.x-(s*rx+tx),o.y-(s*ry+ty));if(d<m)m=d;} if(m<tol){n++;res+=m;}} return [n,res];};
+  for(let i=0;i<O.length;i++)for(let j=i+1;j<O.length;j++){
+    const a=O[i],b=O[j],dob=Math.hypot(b.x-a.x,b.y-a.y); if(dob<150)continue;
+    for(const r1 of REFWORDS[a.t])for(const r2 of REFWORDS[b.t]){
+      const dref=Math.hypot(r2[0]-r1[0],r2[1]-r1[1]); if(dref<250)continue;
+      const s=dob/dref; if(s<0.35||s>1.7)continue;
+      const ang=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r2[1]-r1[1],r2[0]-r1[0]); if(Math.abs(Math.atan2(Math.sin(ang),Math.cos(ang)))>0.04)continue;
+      const tx=a.x-s*r1[0],ty=a.y-s*r1[1]; const [n,res]=score(s,tx,ty);
+      if(!best||n>best.n||(n===best.n&&res<best.res))best={s,tx,ty,n,res,span:dob};
+    }}
+  if(!best)return null;
+  { const tol=16*Math.max(best.s,0.5), xs=[];   // spread of the matched words, in game pixels
+    for(const o of O){for(const [rx,ry] of REFWORDS[o.t]){if(Math.hypot(o.x-(best.s*rx+best.tx),o.y-(best.s*ry+best.ty))<tol){xs.push(rx);break;}}}
+    best.span=xs.length?Math.max(...xs)-Math.min(...xs):0; }
+  return (best.n>=4||(best.n>=3&&best.span>700))?best:null;
+}
+async function normalizeImg(img,T){
+  const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
+  g.drawImage(img,T.tx,T.ty,1920*T.s,1080*T.s,0,0,1920,1080);
+  return await new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
+}
+async function findGame(img){ setStatus('Looking for the game inside the screenshot…'); let T=await locateGame(img);
+  const big=Math.max(1.8,2400/img.naturalWidth);
+  if(!T){ setStatus('Looking closer for the game inside the screenshot…'); T=await locateGame(img,big,true); }
+  if(!T){ T=await locateGame(img,big,false); }
+  if(!T)return null; if(Math.abs(T.s-1)<0.02&&Math.abs(T.tx)<8&&Math.abs(T.ty)<8)return null; return await normalizeImg(img,T); }
 /* ---------- Total Stats ---------- */
 const TROWS=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
 const TCOLS=['Basic Stats','Artifacts','Affinity Bonuses','Classic Arena','Masteries','Faction Guardians','Empowerment','Blessing','Relic','Area Bonuses','Total'];
@@ -366,7 +407,7 @@ async function readRow(img,y){
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
 }
-const TIP=' <span style="color:#8c97ae">Tip: the game must fill the whole screenshot — no taskbar or window borders. Play in full screen, or click the game window and press <b>Alt+PrintScreen</b>.</span>';
+const TIP=' <span style="color:#8c97ae">If it is the right screen, the game may be too small or cut off in the picture — try a bigger window or full screen.</span>';
 const KNAME={totals:'Total Stats',masteries:'Masteries',relic:'Relic',skills:'Blessing'};
 const PNAME={t:'Total Stats',m:'Masteries',r:'Relic',b:'Blessing'};
 const PCLEAR={t:()=>clearTotals(),m:()=>clearMasteries(),r:()=>clearPanel('r',relic),b:()=>clearPanel('b',bless)};
@@ -389,6 +430,7 @@ async function processTotals(img){
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   const head=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
   if(!/total\s*stats/i.test(head)){ await worker.setParameters({tessedit_pageseg_mode:'6'});
+    if(!img._norm){const img2=await findGame(img); if(img2){img2._norm=1; return processTotals(img2);}}
     panelWrong('t',PHELP.t,await whatIs(img),img); return; }
   let area=(await worker.recognize(crop(img,1525,190,350,72,2,'bw'))).data.text.replace(/\s+[vV]+\W*$/,'').replace(/[^A-Za-z' \-]/g,'').trim();
   const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
@@ -643,7 +685,7 @@ function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge
 })();
 
 function handle(el,f){
-  const img=new Image(); img.onload=()=>{ if(!aspectOk(img))aspectNote(img,f.name);queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
+  const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
 }
 async function pump(){
   if(busy||!worker||!queue.length)return; busy=true;
@@ -655,12 +697,19 @@ async function pump(){
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
         if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
           if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
-          else panelWrong(p,PHELP[p],await whatIs(img,kind),img); }
+          else { let im=img,k2=kind; if(!job.normalized){const img2=await findGame(img); if(img2){im=img2;k2=await screenKind(img2);}}
+            if(k2===job.kindWant){ if(p==='r')await processRelic(im); else if(p==='b')await processBlessing(im); else processMasteries(im); }
+            else panelWrong(p,PHELP[p],await whatIs(im,k2),im); } }
         else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
         else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
         else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
         else if(kind==='skills'){ clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} }
-        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure the game fills the whole screenshot (full screen or Alt+PrintScreen)`; }
+        else if(!job.normalized){ const img2=await findGame(img);
+          if(img2){ const hl=highlightSlot(img2);
+            if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`); if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:img2}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (game found in the picture)`;} }
+            else queue.unshift({unknown:true,img:img2,tag:job.tag,name:job.name,normalized:true}); }
+          else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; } }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; }
       }
     }catch(err){console.error(err);}
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
@@ -678,6 +727,8 @@ async function pump(){
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
     let bad=checkSlot(el,item,data.text,highlightSlot(img));
+    if(bad&&bad.probe&&!job.normalized){ const img2=await findGame(img);
+      if(img2){ queue.unshift({el,img:img2,normalized:true}); busy=false; pump(); return; } }
     if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
     if(bad){ showErr(el,bad,img); }
     else { applyHero(el,ht,stars); fill(el,item,data.text); }
