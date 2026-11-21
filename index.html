@@ -11,7 +11,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0b0f16;color:#d9dee8;font-family:Inter,system-ui,sans-serif;min-height:100vh;
  background:radial-gradient(1000px 500px at 10% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 500px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
-.wrap{max-width:1300px;margin:0 auto;padding:28px 20px 60px}
+.wrap{max-width:1300px;margin:0 auto;padding:28px 20px 100px}
 h1{font-family:Cardo,serif;font-size:40px;color:#f3e4bd;letter-spacing:1.5px}
 .sub{color:#8c97ae;margin-top:6px;font-size:15px}
 .howto{margin-top:18px;padding:14px 18px;border:1px solid #2a3448;border-radius:12px;background:rgba(18,24,35,.8);font-size:14px;line-height:1.7;color:#aeb6c6}
@@ -66,7 +66,8 @@ input[type=file]{display:none}
 .bulk small{color:#8c97ae;font-size:12px}
 .blog{margin-top:8px;font-size:13px;color:#aeb6c6;display:flex;flex-wrap:wrap;gap:6px}
 .blog span{padding:3px 9px;border-radius:999px;background:#1b2333}.blog span.ok{color:#7be07a}.blog span.no{color:#ff9a9a}
-.actions{margin-top:22px;display:flex;gap:12px;justify-content:center}
+.actions{position:fixed;right:18px;bottom:18px;z-index:20;display:flex;gap:12px}
+.actions .big{box-shadow:0 6px 18px rgba(0,0,0,.6)}
 .big{font-size:16px;padding:12px 22px;border-radius:12px;font-weight:600}
 .big.gold{border-color:#c9a24a;color:#f3e4bd;background:linear-gradient(180deg,#2a2416,#1b1710)}
 .big.gold:hover{border-color:#f0cf7a;color:#fff}
