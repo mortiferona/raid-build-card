@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raid Build Card</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cardo:wght@700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0f16;color:#d9dee8;font-family:Inter,system-ui,sans-serif;min-height:100vh;
+ background:radial-gradient(1000px 500px at 10% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 500px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
+.wrap{max-width:1300px;margin:0 auto;padding:28px 20px 60px}
+h1{font-family:Cardo,serif;font-size:40px;color:#f3e4bd;letter-spacing:1.5px}
+.sub{color:#8c97ae;margin-top:6px;font-size:15px}
+.howto{margin-top:18px;padding:14px 18px;border:1px solid #2a3448;border-radius:12px;background:rgba(18,24,35,.8);font-size:14px;line-height:1.7;color:#aeb6c6}
+.howto b{color:#f0cf7a}
+.status{margin-top:14px;font-size:14px;color:#7fd3c8;min-height:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.slot{border:1px solid #2a3448;border-radius:14px;background:rgba(18,24,35,.9);padding:14px;position:relative;outline:none}
+.slot.active{border-color:#c9a24a;box-shadow:0 0 0 2px rgba(201,162,74,.35)}
+.slot.drag{border-color:#7fd3c8;background:rgba(127,211,200,.08)}
+.sh{display:flex;justify-content:space-between;align-items:center}
+.sn{font-family:Cardo,serif;font-size:20px;color:#f3e4bd;letter-spacing:1px}
+.badge{font-size:12px;padding:3px 9px;border-radius:999px;background:#1b2333;color:#8c97ae}
+.badge.ok{background:rgba(95,209,106,.15);color:#7be07a}.badge.warn{background:rgba(224,178,74,.15);color:#f0cf7a}.badge.busy{background:rgba(127,211,200,.15);color:#9fe6dc}
+.drop{margin-top:10px;border:1.5px dashed #3a4660;border-radius:10px;padding:18px;text-align:center;color:#7f8aa3;font-size:13px;cursor:pointer;line-height:1.6}
+.drop:hover{border-color:#7fd3c8;color:#9fe6dc}
+.thumb{margin-top:10px;display:none;gap:10px;align-items:center}
+.thumb img.icon{width:64px;height:64px;border-radius:6px;border:1px solid #3a4660;object-fit:cover}
+.thumb button{margin-left:auto}
+button{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #3a4660;background:#1b2333;color:#c3cad8;cursor:pointer}
+button:hover{border-color:#7fd3c8;color:#fff}
+.form{margin-top:10px;display:none}
+.row{display:grid;grid-template-columns:1fr 46px 70px 60px;gap:5px;margin-top:5px;align-items:center}
+.row.main{grid-template-columns:1fr 70px 1fr 70px}
+.row label{font-size:11px;color:#7f8aa3;letter-spacing:1px;text-transform:uppercase}
+input,select{width:100%;font-family:inherit;font-size:13px;padding:5px 6px;border-radius:6px;border:1px solid #2e3850;background:#121825;color:#e8ecf3}
+input.glyph{color:#7be07a}input.asc{color:#d77cf2}
+input.bad,select.bad{border-color:#e0b24a;background:rgba(224,178,74,.08)}
+.setrow{display:grid;grid-template-columns:1fr;gap:5px}
+.hint{font-size:11px;color:#6f7a92;margin-top:6px}
+input[type=file]{display:none}
+.hero{margin-top:18px;display:flex;gap:18px;align-items:center;padding:16px 20px;border:1px solid #3b3150;border-radius:14px;background:linear-gradient(90deg,rgba(120,70,180,.16),rgba(18,24,35,.85))}
+.hero .hn{font-family:Cardo,serif;font-size:30px;color:#f3e4bd;letter-spacing:1px;background:none;border:none;padding:0;width:auto;min-width:200px}
+.hero .hl{width:70px}.hero .stars{color:#ff3b3b;font-size:24px;letter-spacing:2px;cursor:pointer;user-select:none}
+.hero .stars span.off{color:#3a4660}.hero .lbl{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7f8aa3}
+.hero .note{margin-left:auto;font-size:12px;color:#7f8aa3;text-align:right;max-width:280px}
+.mis{margin-top:8px;font-size:12px;color:#f0cf7a;display:none}
+.reset{position:fixed;top:16px;right:18px;z-index:10;display:flex;gap:8px;align-items:center}
+.reset .x{width:40px;height:40px;border-radius:50%;font-size:20px;line-height:1;padding:0;border:1px solid #5a3a3a;background:#2a1618;color:#ff8a8a}
+.reset .x:hover{background:#3a1c1f;border-color:#ff6b6b;color:#fff}
+.reset .ask{display:none;align-items:center;gap:8px;background:#1b2333;border:1px solid #3a4660;border-radius:10px;padding:6px 10px;font-size:13px}
+.reset .ask button.yes{border-color:#ff6b6b;color:#ff8a8a}
+.sx{display:none;position:absolute;top:-11px;right:-11px;z-index:2;width:28px;height:28px;border-radius:50%;padding:0;font-size:13px;line-height:1;border:1px solid #6a3a3a;background:#2a1618;color:#ff8a8a;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.sx:hover{background:#3a1c1f;border-color:#ff6b6b;color:#fff}
+.slot.filled .sx{display:inline-block}
+.err{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #6a3a3a;background:rgba(255,90,90,.08);color:#ffb3b3;font-size:13px;line-height:1.55}
+.err b{color:#fff}.err button{margin-top:8px;border-color:#7fd3c8;color:#9fe6dc}
+.badge.bad{background:rgba(255,90,90,.15);color:#ff9a9a}
+.raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+<div class="reset"><div class="ask" id="askReset">Start over and clear everything? <button class="yes" id="yesReset">Yes, clear</button><button id="noReset">No</button></div><button class="x" id="btnReset" title="Start over">✕</button></div>
+<div class="wrap">
+  <h1>Raid Build Card</h1>
+  <div class="sub">Step 1 · Gear — upload one in-game screenshot per slot</div>
+  <div class="howto">
+    Open the champion in the game, tap an equipped item so its details window appears top-left, and take a screenshot of the <b>whole screen</b>.<br>
+    Drop it on the matching slot, click the slot to browse — or click a slot and press <b>Ctrl+V</b> to paste.
+    Everything is read in your browser; your screenshots are not uploaded anywhere. Check the fields afterwards — anything <b style="color:#f0cf7a">highlighted</b> needs a look.
+  </div>
+  <div class="hero">
+    <div><div class="lbl">Champion</div><input class="hn" id="hName" placeholder="from screenshot…"></div>
+    <div><div class="lbl">Level</div><input class="hl" id="hLvl"></div>
+    <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
+    <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
+  </div>
+  <div class="status" id="status">Loading text reader…</div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="tesseract.min.js"></script>
+<script>
+const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet","Banner"];
+const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
+const SETS_HINT="";
+const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
+function drawStars(){const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
+document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
+document.addEventListener('DOMContentLoaded',()=>{drawStars();
+  document.getElementById('hName').addEventListener('input',e=>hero.name=e.target.value.trim());
+  document.getElementById('hLvl').addEventListener('input',e=>hero.lvl=e.target.value.trim());}); let worker=null; const queue=[]; let busy=false;
+
+/* ---------- UI ---------- */
+const grid=document.getElementById('grid');
+const opt=v=>`<option value=""></option>`+STATS.map(s=>`<option${s===v?' selected':''}>${s}</option>`).join('');
+SLOTS.forEach(name=>{
+  const el=document.createElement('div'); el.className='slot'; el.tabIndex=0; el.dataset.slot=name;
+  el.innerHTML=`<button class="sx" title="Remove this item">✕</button><div class="sh"><span class="sn">${name}</span><span class="badge">empty</span></div>
+  <div class="drop">Drop screenshot here<br>or click to choose · Ctrl+V to paste</div>
+  <input type="file" accept="image/*">
+  <div class="thumb"><img class="icon"><div style="font-size:12px;color:#8c97ae" class="setname"></div></div>
+  <div class="err"></div>
+  <div class="mis"></div>
+  <div class="form">
+    <div class="setrow"><label>Set</label><input class="f-set"></div>
+    <div class="row main" style="margin-top:8px"><select class="f-ms">${opt('')}</select><input class="f-mv" placeholder="value"><select class="f-as">${opt('')}</select><input class="f-av asc" placeholder="bonus"></div>
+    <div class="row" style="margin-top:8px"><label>Substat</label><label>Rolls</label><label>Value</label><label>Glyph</label></div>
+    ${[0,1,2,3].map(i=>`<div class="row sub" data-i="${i}"><select class="f-ss">${opt('')}</select><input class="f-sr" placeholder="0"><input class="f-sv"><input class="f-sg glyph" placeholder="—"></div>`).join('')}
+    <div class="hint">Main stat · ascension bonus (purple, if any) · substats</div>
+    <div class="raw"></div>
+  </div>`;
+  grid.appendChild(el);
+  const file=el.querySelector('input[type=file]');
+  const pick=()=>{setActive(el);file.click();};
+  el.querySelector('.drop').addEventListener('click',pick);
+  el.addEventListener('click',()=>setActive(el));
+  el.querySelector('.sx').addEventListener('click',e=>{e.stopPropagation();clearSlot(el);});
+  file.addEventListener('change',()=>{if(file.files[0])handle(el,file.files[0]);file.value='';});
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)handle(el,f);});
+  el.addEventListener('input',e=>{if(e.target.matches('input,select'))e.target.classList.remove('bad');});
+});
+function emptySlot(el){
+  el.querySelector('.err').style.display='none';
+  el.querySelector('.drop').style.display=''; el.querySelector('.thumb').style.display='none';
+  el.querySelector('.form').style.display='none'; el.querySelector('.mis').style.display='none';
+  el.querySelectorAll('input:not([type=file]),select').forEach(n=>{n.value='';n.classList.remove('bad');});
+  el.querySelector('.thumb img').removeAttribute('src'); el.querySelector('.raw').textContent='';
+  el._hero=null; el.classList.remove('filled'); delete state[el.dataset.slot]; badge(el,'','empty');
+}
+function setHero(h,from){
+  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,from}:{name:'',lvl:'',stars:0,from:''});
+  document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
+  document.getElementById('hNote').textContent=h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
+}
+function clearSlot(el){
+  for(let i=queue.length-1;i>=0;i--)if(queue[i].el===el)queue.splice(i,1);
+  const wasSource=hero.from===el.dataset.slot; emptySlot(el);
+  if(wasSource){ const next=[...document.querySelectorAll('.slot')].find(s=>s._hero); setHero(next?next._hero:null,next?next.dataset.slot:''); }
+  // re-check mismatch warnings against the (possibly new) hero
+  document.querySelectorAll('.slot').forEach(s=>{const m=s.querySelector('.mis');
+    if(s._hero&&hero.name&&s._hero.name.toLowerCase()!==hero.name.toLowerCase()){m.textContent=`⚠ This screenshot is from ${s._hero.name}, not ${hero.name}.`;m.style.display='block';}else m.style.display='none';});
+}
+function resetAll(){
+  queue.length=0;
+  for(const k in state)delete state[k];
+  setHero(null,'');
+  document.querySelectorAll('.slot').forEach(el=>{emptySlot(el);el.classList.remove('active');});
+  active=null; setStatus(worker?'Ready — add your screenshots.':'Loading text reader…');
+}
+document.getElementById('btnReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='flex';});
+document.getElementById('noReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';});
+document.getElementById('yesReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';resetAll();});
+function setActive(el){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));el.classList.add('active');active=el;}
+document.addEventListener('paste',e=>{
+  if(!active)return; const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
+  if(it){e.preventDefault();handle(active,it.getAsFile());}
+});
+const setStatus=t=>document.getElementById('status').textContent=t;
+function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge '+cls;b.textContent=txt;}
+
+/* ---------- OCR engine ---------- */
+(async()=>{
+  try{
+    worker=await Tesseract.createWorker('eng',1,{workerPath:new URL('worker-wrap.js',location.href).href,corePath:new URL('./',location.href).href,langPath:new URL('./',location.href).href,gzip:false,workerBlobURL:false});
+    await worker.setParameters({tessedit_pageseg_mode:'6'});
+    setStatus('Ready — add your screenshots.'); pump();
+  }catch(err){setStatus('Could not start the text reader: '+err);}
+})();
+
+function handle(el,f){
+  const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
+}
+async function pump(){
+  if(busy||!worker||!queue.length)return; busy=true;
+  const {el,img}=queue.shift();
+  try{
+    badge(el,'busy','reading…'); setStatus(`Reading ${el.dataset.slot}…`);
+    const {bw,icon,valCrop,head,stars}=prep(img);
+    el.querySelector('.thumb img').src=icon;
+    const {data}=await worker.recognize(bw);
+    const item=parse(data.text);
+    await worker.setParameters({tessedit_char_whitelist:'0123456789+%'});
+    const nums=(await worker.recognize(valCrop)).data.text.split('\n').map(l=>l.replace(/\s+/g,'')).filter(Boolean);
+    await worker.setParameters({tessedit_char_whitelist:''});
+    mergeNums(item,nums);
+    await worker.setParameters({tessedit_pageseg_mode:'7'});
+    const ht=(await worker.recognize(head)).data.text;
+    await worker.setParameters({tessedit_pageseg_mode:'6'});
+    const bad=checkSlot(el,item,data.text);
+    if(bad){ showErr(el,bad,img); }
+    else { applyHero(el,ht,stars); fill(el,item,data.text); }
+  }catch(err){badge(el,'warn','error');console.error(err);}
+  busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump();
+}
+
+/* crop the item window (top-left), upscale x3, keep light text, drop dark/blue background */
+function prep(img){
+  const s=img.naturalWidth/1920;              // layout scales with width (16:9 screenshots)
+  const cx=25*s,cy=0,cw=475*s,ch=290*s,k=3*(1/s);
+  const c=document.createElement('canvas'); c.width=Math.round(cw*k); c.height=Math.round(ch*k);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,cx,cy,cw,ch,0,0,c.width,c.height);
+  const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+  for(let i=0;i<p.length;i+=4){const r=p[i],gg=p[i+1],b=p[i+2];
+    const dark=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120);
+    const v=dark?0:255; p[i]=p[i+1]=p[i+2]=v;}
+  g.putImageData(d,0,0);
+  const ic=document.createElement('canvas'); ic.width=ic.height=128;
+  ic.getContext('2d').drawImage(img,36*s,50*s,96*s,96*s,0,0,128,128);
+  // value column of the 4 substat rows (x 255–480, y 155–290 @1920)
+  const vx=255*s,vy=155*s,vw=225*s,vh=135*s,vk=3/s;
+  const v=document.createElement('canvas'); v.width=Math.round(vw*vk); v.height=Math.round(vh*vk);
+  const vg=v.getContext('2d'); vg.imageSmoothingQuality='high'; vg.drawImage(img,vx,vy,vw,vh,0,0,v.width,v.height);
+  const vd=vg.getImageData(0,0,v.width,v.height),vp=vd.data;
+  for(let i=0;i<vp.length;i+=4){const r=vp[i],gg=vp[i+1],b=vp[i+2];
+    const t=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120); vp[i]=vp[i+1]=vp[i+2]=t?0:255;}
+  vg.putImageData(vd,0,0);
+  // champion header: name + level (x 560–1330, y 10–70 @1920)
+  const hx=560*s,hy=10*s,hw=770*s,hh=60*s,hk=2/s;
+  const h=document.createElement('canvas'); h.width=Math.round(hw*hk); h.height=Math.round(hh*hk);
+  const hg=h.getContext('2d'); hg.drawImage(img,hx,hy,hw,hh,0,0,h.width,h.height);
+  const hd=hg.getImageData(0,0,h.width,h.height),hp=hd.data;
+  for(let i=0;i<hp.length;i+=4){const t=(hp[i]*.3+hp[i+1]*.59+hp[i+2]*.11)>170;hp[i]=hp[i+1]=hp[i+2]=t?0:255;}
+  hg.putImageData(hd,0,0);
+  // red stars: count runs of strongly red columns across the header band
+  const sc=document.createElement('canvas'); const sw=Math.round(900*s), sh=Math.round(35*s);
+  sc.width=sw; sc.height=sh; const sg=sc.getContext('2d'); sg.drawImage(img,520*s,25*s,900*s,35*s,0,0,sw,sh);
+  const sd=sg.getImageData(0,0,sw,sh).data; let runs=0,prev=false; const need=Math.max(3,Math.round(4*s));
+  for(let x=0;x<sw;x++){let n=0;for(let y=0;y<sh;y++){const k=(y*sw+x)*4;if(sd[k]>200&&sd[k+1]<75&&sd[k+2]<75)n++;}
+    const on=n>=need; if(on&&!prev)runs++; prev=on;}
+  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:Math.min(runs,6)};
+}
+
+/* ---------- parsing ---------- */
+function normStat(t){
+  t=t.toUpperCase().replace(/[©€]\.?|\(\./g,'C.').replace(/\s+/g,' ').trim();
+  t=t.replace(/^C\.? ?DMG/,'C. DMG').replace(/^C\.? ?RATE/,'C. RATE');
+  return STATS.find(s=>t.startsWith(s))||null;
+}
+const STAT_RE='(HP|ATK|DEF|SPD|RES|ACC|[C©€]\\.? ?DMG|[C©€]\\.? ?RATE)';
+function fixNum(v,stat){
+  v=v.replace(/[\/|]/g,'7').replace(/[Oo]/g,'0').replace(/[lI]/g,'1').replace(/[Ss](?=\d|%|$)/g,'5');
+  return v;
+}
+function splitGlyph(raw,stat){
+  // "36+7", "6%+8%", "64436" (lost '+'), "11+8 [MAX]"
+  raw=fixNum(raw.replace(/\[?MAX\]?/i,'').trim(),stat);
+  let m=raw.match(/^(\d+%?)\s*\+\s*(\d+%?)$/); if(m)return {v:m[1],g:m[2],sure:true};
+  m=raw.match(/^(\d+%?)$/);
+  if(m){
+    const n=parseInt(m[1]),pct=m[1].endsWith('%');
+    const limit=stat==='HP'?2000:(pct?40:400);
+    if(n>limit){ // a '+' was probably read as '4' — try every '4' and keep the plausible split
+      const d=m[1].replace('%',''), gl=stat==='HP'?900:(pct?20:80); let best=null;
+      for(let i=1;i<d.length-1;i++){ if(d[i]!=='4')continue;
+        const a=parseInt(d.slice(0,i)), b=parseInt(d.slice(i+1));
+        if(a<=limit && b>0 && b<=gl){ best={v:d.slice(0,i)+(pct?'%':''),g:d.slice(i+1)+(pct?'%':''),sure:false}; break; } }
+      return best||{v:m[1],g:'',sure:false};
+    }
+    return {v:m[1],g:'',sure:true};
+  }
+  return {v:raw,g:'',sure:false};
+}
+function parse(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const it={set:'',main:null,asc:null,subs:[]};
+  for(const ln of lines){
+    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){it.set=m[1].replace(/\s+x$/i,'').trim();continue;}
+    if(!it.main){
+      // main line: "... +16] ATK 265 ATK 80" / "HP 600" — first stat+number pair(s) on the line
+      const re=new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'); const pairs=[...ln.matchAll(re)];
+      if(pairs.length && !/^\s*[A-Z©€.\s]+\(\d\)/i.test(ln) && (/\+1\d|\]|^\W/.test(ln)||pairs.length===2||lines.indexOf(ln)<=3)){
+        it.main={s:normStat(pairs[0][1]),v:pairs[0][2]};
+        if(pairs[1])it.asc={s:normStat(pairs[1][1]),v:pairs[1][2]};
+        continue;
+      }
+    }
+    if(it.main && it.subs.length<4){
+      m=ln.match(new RegExp('^'+STAT_RE+'\\s*(?:\\((\\d)\\))?\\s+(.+)$','i'));
+      if(m){const s=normStat(m[1]); const gl=splitGlyph(m[3],s); it.subs.push({s,r:m[2]||'',...gl});}
+    }
+  }
+  return it;
+}
+const ARMOR={Weapon:'Weapon',Helmet:'Helmet',Shield:'Shield',Gauntlets:'Gloves',Chestplate:'Chest',Boots:'Boots'};
+const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banner:['HP','ATK','DEF','ACC','RES']};
+function checkSlot(el,item,text){
+  const want=el.dataset.slot;
+  if(!item.set && !item.main) return {msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`};
+  const found=Object.keys(ARMOR).find(k=>new RegExp('\\b'+k+'\\b','i').test(text));
+  const isAcc=!!ACC_MAIN[want];
+  if(found){
+    const got=ARMOR[found];
+    if(got!==want) return {msg:`This is a <b>${got}</b> screenshot, not ${want}.`,move:got};
+    return null;
+  }
+  // no armour slot name in the window → it is an accessory (the game shows the faction there instead)
+  if(!isAcc) return {msg:`This looks like an accessory (Ring, Amulet or Banner), not ${want}.`};
+  const ms=item.main&&item.main.s;
+  if(ms && !ACC_MAIN[want].includes(ms)){
+    const fit=Object.keys(ACC_MAIN).filter(k=>ACC_MAIN[k].includes(ms));
+    return {msg:`A ${want} can't have <b>${ms}</b> as its main stat — this is probably ${fit.length?('the <b>'+fit.join(' or ')+'</b>'):'another item'}.`,move:fit.length===1?fit[0]:null};
+  }
+  return null;
+}
+function showErr(el,e,img){
+  const box=el.querySelector('.err');
+  box.innerHTML='⚠ '+e.msg+(e.move?`<br><button class="mv">Move it to ${e.move}</button>`:'');
+  box.style.display='block'; badge(el,'bad','wrong screenshot'); el.classList.add('filled');
+  el.querySelector('.drop').style.display='none';
+  if(e.move){ box.querySelector('.mv').addEventListener('click',ev=>{ev.stopPropagation();
+    const target=document.querySelector(`.slot[data-slot="${e.move}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
+    queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }); }
+}
+function applyHero(el,txt,stars){
+  el._hero=null;
+  const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');           // drop the "2,191/2,200" storage counter
+  const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i);
+  const mis=el.querySelector('.mis'); mis.style.display='none';
+  if(!m)return;
+  const name=m[1].trim(), lvl=m[2]; el._hero={name,lvl,stars};
+  if(!hero.name){
+    setHero({name,lvl,stars},el.dataset.slot);
+  }else if(name.toLowerCase()!==hero.name.toLowerCase()){
+    mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
+  }
+}
+function mergeNums(it,nums){
+  // digits-only reading of the value column; trust it when it parses cleanly
+  it.subs.forEach((sub,i)=>{
+    const t=(nums[i]||'').replace(/MAX$/,''); if(!t)return;
+    const r=splitGlyph(t,sub.s);
+    if(sub.sure && /^\d+%?$/.test(sub.v||''))return;                 // first reading clean — keep it
+    const firstOk=/^\d+%?$/.test(sub.v||'');
+    if(firstOk && r.v===sub.v && (r.g||'')===(sub.g||'')){ sub.sure=true; return; } // both readings agree
+    if(!firstOk && r.sure && /^\d+%?$/.test(r.v)){ sub.v=r.v; sub.g=r.g; sub.sure=true; return; } // first was garbage, digits clean
+    if(r.v && /^\d/.test(r.v) && !firstOk){ sub.v=r.v; sub.g=r.g; sub.sure=false; } // best guess, ask to confirm
+  });
+}
+function fill(el,it,raw){
+  el.querySelector('.err').style.display='none';
+  el.querySelector('.drop').style.display='none';
+  el.querySelector('.thumb').style.display='flex';
+  el.querySelector('.form').style.display='block';
+  el.querySelector('.setname').textContent=it.set?('Set: '+it.set):'';
+  const q=c=>el.querySelector(c); let issues=0;
+  const set=(node,val,ok=true)=>{node.value=val||'';node.classList.toggle('bad',!ok);if(!ok)issues++;};
+  set(q('.f-set'),it.set,!!it.set);
+  set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
+  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v));
+  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v);
+  el.querySelectorAll('.row.sub').forEach((r,i)=>{
+    const s=it.subs[i]||{};
+    set(r.querySelector('.f-ss'),s.s,!!s.s);
+    set(r.querySelector('.f-sr'),s.r);
+    set(r.querySelector('.f-sv'),s.v,!!s.v&&s.sure!==false);
+    set(r.querySelector('.f-sg'),s.g,s.sure!==false);
+  });
+  q('.raw').textContent=raw;
+  state[el.dataset.slot]=it; el.classList.add('filled');
+  badge(el,issues?'warn':'ok',issues?`${issues} to check`:'read ✓');
+}
+</script>
+</body>
+</html>
