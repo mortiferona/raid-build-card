@@ -66,6 +66,38 @@ input[type=file]{display:none}
 .bulk small{color:#8c97ae;font-size:12px}
 .blog{margin-top:8px;font-size:13px;color:#aeb6c6;display:flex;flex-wrap:wrap;gap:6px}
 .blog span{padding:3px 9px;border-radius:999px;background:#1b2333}.blog span.ok{color:#7be07a}.blog span.no{color:#ff9a9a}
+.actions{margin-top:22px;display:flex;gap:12px;justify-content:center}
+.big{font-size:16px;padding:12px 22px;border-radius:12px;font-weight:600}
+.big.gold{border-color:#c9a24a;color:#f3e4bd;background:linear-gradient(180deg,#2a2416,#1b1710)}
+.big.gold:hover{border-color:#f0cf7a;color:#fff}
+.modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(4,6,10,.88);overflow:auto;padding:24px}
+.modal .bar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;margin-bottom:16px;z-index:2}
+.modal .stage{margin:0 auto;transform-origin:top left}
+/* ---------- the card ---------- */
+.card{width:1400px;padding:30px;font-family:Inter,sans-serif;color:#d9dee8;
+ background:radial-gradient(1100px 450px at 15% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 450px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
+.card .ch{display:flex;align-items:center;gap:20px;padding:22px 28px;border:1px solid #3b3150;border-radius:16px;background:linear-gradient(90deg,rgba(120,70,180,.18),rgba(20,30,45,.4))}
+.card .cn{font-family:Cardo,serif;font-size:54px;letter-spacing:2px;color:#f3e4bd;line-height:1;text-transform:uppercase}
+.card .cs{color:#ff3b3b;font-size:26px;letter-spacing:3px;margin-left:12px}
+.card .chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.card .chip{padding:5px 13px;border-radius:999px;background:#1a2130;border:1px solid #2e3850;font-size:15px;font-weight:600}
+.card .chip.set{border-color:#5a4a2a;color:#f0cf7a}
+.card .panel{margin-top:20px;border:1px solid #232c3d;border-radius:16px;background:rgba(18,24,35,.85);padding:20px}
+.card .pt{font-family:Cardo,serif;font-size:24px;color:#f3e4bd;letter-spacing:1.5px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline}
+.card .pt small{font-family:Inter;font-size:13px;color:#7f8aa3;letter-spacing:0}
+.card .gear{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card .gc{background:#151b27;border:1px solid #2a3448;border-radius:12px;padding:14px 16px}
+.card .gc.none{opacity:.45}
+.card .gtop{display:flex;gap:12px}.card .gtop img{width:84px;height:84px;border-radius:6px}
+.card .gtop .ph{width:84px;height:84px;border-radius:6px;border:1px dashed #3a4660}
+.card .gm{flex:1}.card .sl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7f8aa3}
+.card .main{display:flex;justify-content:space-between;font-size:23px;font-weight:700;color:#fff;margin-top:2px;gap:8px}
+.card .asc{display:flex;justify-content:space-between;font-size:15px;color:#d77cf2;font-weight:600;margin-top:2px}
+.card .setn{font-size:12px;color:#c9a24a;margin-top:3px}
+.card .subs{margin-top:10px;border-top:1px solid #232c3d;padding-top:8px}
+.card .sr{display:grid;grid-template-columns:1fr 64px 56px;font-size:16px;line-height:1.6}
+.card .sr b{text-align:right;color:#e8ecf3;font-weight:600}.card .sr i{text-align:right;color:#5fd16a;font-style:normal;font-weight:600}
+.card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
 </head>
@@ -89,9 +121,12 @@ input[type=file]{display:none}
   <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
   <div class="grid" id="grid"></div>
+  <div class="actions"><button class="big gold" id="btnPreview">Preview card</button></div>
 </div>
+<div class="modal" id="modal"><div class="bar"><button class="big gold" id="btnSave">Download PNG</button><button class="big" id="btnClose">Close</button></div><div class="stage" id="stage"></div></div>
 
 <script src="tesseract.min.js"></script>
+<script src="html2canvas.min.js"></script>
 <script>
 const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet","Banner"];
 const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
@@ -204,6 +239,49 @@ async function handleBulk(files){
   z.addEventListener('dragleave',()=>z.classList.remove('drag'));
   z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
 })();
+/* ---------- card preview & download ---------- */
+const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function readSlot(el){
+  const q=c=>el.querySelector(c), v=c=>(q(c)&&q(c).value||'').trim();
+  if(!el.classList.contains('filled')||el.querySelector('.err').style.display==='block')return null;
+  return {slot:el.dataset.slot,icon:q('.thumb img').getAttribute('src'),set:v('.f-set'),ms:v('.f-ms'),mv:v('.f-mv'),as:v('.f-as'),av:v('.f-av'),
+    subs:[...el.querySelectorAll('.row.sub')].map(r=>({s:r.querySelector('.f-ss').value,r:r.querySelector('.f-sr').value.trim(),v:r.querySelector('.f-sv').value.trim(),g:r.querySelector('.f-sg').value.trim()})).filter(x=>x.s||x.v)};
+}
+function buildCard(){
+  const items=[...document.querySelectorAll('.slot')].map(el=>({slot:el.dataset.slot,d:readSlot(el)}));
+  const name=document.getElementById('hName').value.trim()||'Champion', lvl=document.getElementById('hLvl').value.trim();
+  const sets={}; items.forEach(i=>{if(i.d&&i.d.set)sets[i.d.set]=(sets[i.d.set]||0)+1;});
+  const setChips=Object.entries(sets).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span class="chip set">${esc(k)} ×${n}</span>`).join('');
+  const cards=items.map(({slot,d})=>{
+    if(!d) return `<div class="gc none"><div class="gtop"><div class="ph"></div><div class="gm"><div class="sl">${slot}</div><div class="main"><span>—</span></div></div></div></div>`;
+    const subs=d.subs.map(x=>`<div class="sr"><span>${esc(x.s)}${x.r&&x.r!=='0'?' ('+esc(x.r)+')':''}</span><b>${esc(x.v)}</b><i>${x.g?'+'+esc(x.g):''}</i></div>`).join('');
+    return `<div class="gc"><div class="gtop">${d.icon?`<img src="${d.icon}">`:'<div class="ph"></div>'}<div class="gm"><div class="sl">${slot}</div>
+      <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
+      ${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
+  const stars='★'.repeat(hero.stars||0);
+  return `<div class="card" id="card"><div class="ch"><div>
+    <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
+    <div class="chips">${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>
+    <div class="panel"><div class="pt">Gear<small>all values as in game · <span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
+    <div class="foot"><span>Raid: Shadow Legends</span><span>${esc(name)} · build card</span></div></div>`;
+}
+function fitStage(){const st=document.getElementById('stage'),c=document.getElementById('card');if(!c)return;
+  const k=Math.min(1,(window.innerWidth-48)/c.offsetWidth); st.style.transform=`scale(${k})`; st.style.width=c.offsetWidth+'px'; st.style.height=(c.offsetHeight*k)+'px';}
+document.getElementById('btnPreview').addEventListener('click',()=>{
+  document.getElementById('stage').innerHTML=buildCard(); document.getElementById('modal').style.display='block'; fitStage();});
+document.getElementById('btnClose').addEventListener('click',()=>{document.getElementById('modal').style.display='none';});
+window.addEventListener('resize',fitStage);
+document.getElementById('btnSave').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnSave'), st=document.getElementById('stage'), c=document.getElementById('card');
+  btn.textContent='Saving…'; const prev=st.style.transform; st.style.transform='none';
+  try{ await document.fonts.ready;
+    const canvas=await html2canvas(c,{backgroundColor:'#0b0f16',scale:1,useCORS:true});
+    const a=document.createElement('a'); a.download=((document.getElementById('hName').value||'champion').trim().replace(/\s+/g,'_'))+'_build.png';
+    a.href=canvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove();
+  }catch(err){alertBox('Could not create the image: '+err);}
+  st.style.transform=prev; btn.textContent='Download PNG';
+});
+function alertBox(t){setStatus(t);}
 function setActive(el){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));el.classList.add('active');active=el;}
 document.addEventListener('paste',e=>{
   const items=[...(e.clipboardData||{}).items||[]].filter(i=>i.type.startsWith('image/'));
