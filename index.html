@@ -129,6 +129,10 @@ input[type=file]{display:none}
 .card .abadge{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;border:1px solid #3f8f86;background:rgba(127,211,200,.12);color:#9fe6dc;font-size:16px;font-weight:600}
 .card td.w{color:#e1e5ee}.card td.g{color:#7be07a}.card td.tot{color:#f0cf7a;font-weight:800;font-size:18px}
 .card th.ar,.card td.ar{background:rgba(127,211,200,.10)}.card th.tot,.card td.tot{background:rgba(201,162,74,.10)}
+.card .relic{display:flex;gap:16px}.card .relic img.art{width:150px;height:180px;object-fit:cover;border-radius:10px;border:1px solid #2f5866}
+.card .rn{font-family:Cardo,serif;font-size:26px;color:#7fe0ec}.card .myth{display:inline-block;color:#fff;font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px;margin:6px 0}
+.card .rs{display:flex;gap:8px;margin-top:6px}.card .rs div{background:#1b2333;border-radius:8px;padding:6px 10px;font-size:13px;color:#8c97ae;text-align:center}.card .rs b{display:block;color:#5fd16a;font-size:17px}
+.card .rd{font-size:15px;line-height:1.5;margin-top:12px;color:#c3cad8}.card .sets{width:100%;border-radius:10px;margin-top:12px}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
@@ -139,7 +143,7 @@ input[type=file]{display:none}
   <h1>Raid Build Card</h1>
   <div class="sub">Turn your in-game screenshots into one clean build card</div>
   <div class="howto">
-    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one per item, plus the <b>Total Stats</b> screen and the <b>Masteries</b> screen.<br>
+    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one per item, plus the <b>Total Stats</b> screen, the <b>Masteries</b> screen, the <b>relic tab</b> and the <b>skills tab</b> (for the Blessing).<br>
     Drop <b>all of them at once</b> in the gold box below and each goes to its place by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
     Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
   </div>
@@ -149,7 +153,7 @@ input[type=file]{display:none}
     <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
     <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
   </div>
-  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats and Masteries</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats, Masteries, Relic and Skills</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
   <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
   <div class="grid" id="grid"></div>
@@ -161,6 +165,22 @@ input[type=file]{display:none}
     <div class="err" id="tErr"></div>
     <div class="area" id="tArea">Showing Area Bonuses for: <input id="tAreaIn"></div>
     <div class="tbl" id="tTbl"></div>
+  </div>
+  <div class="tpanel" id="rpanel" tabindex="0">
+    <button class="sx" id="rClear" title="Remove">✕</button>
+    <div class="sh"><span class="sn">Relic</span><span class="badge" id="rBadge">empty</span></div>
+    <div class="drop" id="rDrop">Drop the screenshot with the <b>Equipped Relic</b> open (relic tab on the champion screen)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="rFile" accept="image/*">
+    <div class="err" id="rErr"></div>
+    <div id="rView" style="display:none;margin-top:12px;gap:16px;align-items:flex-start"><img id="rImg" style="height:160px;border-radius:8px;border:1px solid #2a3448"><div style="flex:1;font-size:14px;line-height:1.7"><input id="rName" style="font-size:16px;font-weight:700;margin-bottom:6px"><div id="rInfo"></div><textarea id="rDesc" rows="4" style="width:100%;margin-top:6px;font-family:inherit;font-size:13px;background:#121825;color:#e8ecf3;border:1px solid #2e3850;border-radius:6px;padding:6px"></textarea></div></div>
+  </div>
+  <div class="tpanel" id="bpanel" tabindex="0">
+    <button class="sx" id="bClear" title="Remove">✕</button>
+    <div class="sh"><span class="sn">Blessing</span><span class="badge" id="bBadge">empty</span></div>
+    <div class="drop" id="bDrop">Drop the screenshot with the <b>Skills</b> tab open (shows the Blessing at the bottom right)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="bFile" accept="image/*">
+    <div class="err" id="bErr"></div>
+    <div id="bView" style="display:none;margin-top:12px;gap:16px;align-items:flex-start"><img id="bImg" style="height:110px"><div style="font-size:14px;line-height:1.8">Blessing: <input id="bName" style="width:240px;font-weight:700"><div id="bInfo" style="color:#8c97ae"></div></div></div>
   </div>
   <div class="tpanel" id="mpanel" tabindex="0">
     <button class="sx" id="mClear" title="Remove Masteries">✕</button>
@@ -240,7 +260,7 @@ function clearSlot(el){
     if(s._hero&&hero.name&&s._hero.name.toLowerCase()!==hero.name.toLowerCase()){m.textContent=`⚠ This screenshot is from ${s._hero.name}, not ${hero.name}.`;m.style.display='block';}else m.style.display='none';});
 }
 function resetAll(){
-  clearTotals(); clearMasteries();
+  clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
   queue.length=0;
   for(const k in state)delete state[k];
   setHero(null,'');
@@ -397,6 +417,7 @@ async function screenKind(img){
   const a=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
   let kind=/total\s*stats/i.test(a)?'totals':null;
   if(!kind){const b=(await worker.recognize(crop(img,180,110,320,65,1.5,'bw'))).data.text; if(/offen[sc]e/i.test(b))kind='masteries';}
+  if(!kind){const c=(await worker.recognize(crop(img,1440,200,460,40,2,'bw'))).data.text; if(/equipped\s*relic/i.test(c))kind='relic'; else if(/skills/i.test(c))kind='skills';}
   await worker.setParameters({tessedit_pageseg_mode:'6'}); return kind;
 }
 (()=>{const p=document.getElementById('mpanel'),fi=document.getElementById('mFile');
@@ -410,6 +431,80 @@ async function screenKind(img){
   p.addEventListener('click',()=>{document.querySelectorAll('.slot,.tpanel').forEach(s=>s.classList.remove('active'));active=p;p.classList.add('active');});
   window._goMasteries=go;
 })();
+/* ---------- Relic, Blessing, champion details ---------- */
+const relic={}; const bless={}; const champ={};
+function pxData(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const g=c.getContext('2d');g.drawImage(img,0,0);
+  const d=g.getImageData(0,0,c.width,c.height).data,W=c.width,s=img.naturalWidth/1920;return (x,y)=>{const k=(Math.round(y*s)*W+Math.round(x*s))*4;return [d[k],d[k+1],d[k+2]];};}
+function cropURL(img,x,y,w,h,type){const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);
+  c.getContext('2d').drawImage(img,x*s,y*s,w*s,h*s,0,0,c.width,c.height);return c.toDataURL(type||'image/png');}
+function rarityByColor([r,g,b]){ // label background colours used by the game
+  if(r>200&&g<110&&b<90)return 'Mythical'; if(r>200&&g>110&&g<175&&b<80)return 'Legendary';
+  if(r>150&&b>150&&g<110)return 'Epic'; if(b>170&&r<110)return 'Rare'; if(g>160&&r<120&&b<120)return 'Uncommon'; return '';}
+function affinityByColor(px){ let c={Void:0,Magic:0,Force:0,Spirit:0};
+  for(let x=605;x<645;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
+    if(r>130&&b>130&&g<100)c.Void++; else if(b>r+40&&b>g)c.Magic++; else if(r>g+60&&r>b+60)c.Force++; else if(g>r+40&&g>b)c.Spirit++;}
+  const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>20?best[0]:''; }
+const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
+function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
+function snapFaction(t){if(!t)return '';let best=['',99];FACTIONS.forEach(f=>{const v=lev(t,f);if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
+function avgColor(px,x0,y0,x1,y1){let r=0,g=0,b=0,n=0;for(let x=x0;x<x1;x+=2)for(let y=y0;y<y1;y+=2){const p=px(x,y),mx=Math.max(...p),mn=Math.min(...p);if(mx<150||mx-mn<90)continue;r+=p[0];g+=p[1];b+=p[2];n++;}return n?[r/n,g/n,b/n]:[0,0,0];}
+async function readChampDetails(img){
+  const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const role=(await worker.recognize(crop(img,1150,140,170,45,2,'bw'))).data.text.replace(/[^A-Za-z]/g,'');
+  const fac=snapFaction((await worker.recognize(crop(img,490,255,215,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim());
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const rar=rarityByColor(avgColor(px,1162,104,1306,134)), aff=affinityByColor(px);
+  // portrait = roster cell with the bright green selection frame
+  const xs=[30,137,244,351], ys=[185,318,451,584,717]; let best=[0,0,0];
+  ys.forEach((y0,yi)=>xs.forEach((x0,xi)=>{let n=0;for(let x=x0;x<x0+102;x+=2)for(const y of [y0+1,y0+3,y0+122,y0+124]){const [r,g,b]=px(x,y);if(g>200&&r<120&&b<120)n++;} if(n>best[0])best=[n,xi,yi];}));
+  const portrait=best[0]>60?cropURL(img,xs[best[1]]+3,ys[best[2]]+3,97,119):'';
+  Object.assign(champ,{role:/^(Attack|Defense|Support|HP)$/i.test(role)?role:champ.role||'',faction:fac||champ.faction||'',rarity:rar||champ.rarity||'',affinity:aff||champ.affinity||'',portrait:portrait||champ.portrait||''});
+}
+function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
+  if(top===null)return 0; let runs=0,prev=false; for(let x=x0;x<x1;x++){let on=false;for(let y=top;y<top+4;y++){const [r,g,b]=px(x,y);if(r>200&&g>140&&b<100){on=true;break;}} if(on&&!prev)runs++;prev=on;} return Math.min(runs,6);}
+async function processRelic(img){
+  const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
+  relic.name=(await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
+  relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1');
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const st=(await worker.recognize(crop(img,1455,530,375,65,2,'bw'))).data.text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const names=(st[0]||'').split(/\s+/).filter(Boolean), vals=(st[1]||'').split(/\s+/).filter(Boolean);
+  relic.stats=names.map((n,i)=>[n.replace(/[^A-Z.%]/gi,'').toUpperCase(),(vals[i]||'').replace(/[^\d+%]/g,'')]);
+  relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').trim();
+  relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
+  relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
+  await readChampDetails(img);
+  document.getElementById('rDrop').style.display='none'; document.getElementById('rErr').style.display='none';
+  document.getElementById('rView').style.display='flex'; document.getElementById('rImg').src=relic.img;
+  document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
+  document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:#5fd16a">${v}</b>`).join(' · ')}`;
+  setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
+}
+async function processBlessing(img){
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  bless.name=(await worker.recognize(crop(img,1670,1000,230,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  bless.img=cropURL(img,1705,792,165,180); await readChampDetails(img);
+  document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
+  document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
+  document.getElementById('bInfo').textContent=`Level = red stars of the champion (${hero.stars||'?'}★)`;
+  setBadgeId('bBadge','ok','read ✓'); document.getElementById('bpanel').classList.add('filled');
+}
+function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
+  [p+'View',p+'Err'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(p+'Drop').style.display='';setBadgeId(p+'Badge','','empty');}
+['r','b'].forEach(p=>{const el=document.getElementById(p+'panel'),fi=document.getElementById(p+'File'),want=p==='r'?'relic':'skills',obj=p==='r'?relic:bless;
+  const go=async f=>{clearPanel(p,obj);const img=await loadImg(f);queue.push({kindWant:want,img});setBadgeId(p+'Badge','busy','queued');pump();};
+  document.getElementById(p+'Drop').addEventListener('click',()=>fi.click());
+  document.getElementById(p+'Clear').addEventListener('click',e=>{e.stopPropagation();clearPanel(p,obj);});
+  fi.addEventListener('change',()=>{if(fi.files[0])go(fi.files[0]);fi.value='';});
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)go(f);});
+  el.addEventListener('click',()=>{document.querySelectorAll('.slot,.tpanel').forEach(s=>s.classList.remove('active'));active=el;el.classList.add('active');});
+  el._go=go;
+});
+document.addEventListener('input',e=>{if(e.target.id==='rName')relic.name=e.target.value;if(e.target.id==='rDesc')relic.desc=e.target.value;if(e.target.id==='bName')bless.name=e.target.value;});
 /* ---------- card preview & download ---------- */
 const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function readSlot(el){
@@ -443,13 +538,23 @@ function buildCard(){
   const mc=mast.counts?mast.counts.filter(c=>c[1]>0).map(c=>`${c[0]} ${c[1]}`).join(' · '):'';
   const mBody=mast.img?`<img src="${mast.img}" style="width:100%;border-radius:10px;display:block">`:`<div class="empty" style="padding:120px 16px"><b>Masteries</b>not added yet</div>`;
   const bstars=hero.stars?`<span style="color:#ff3b3b;letter-spacing:1px">${'★'.repeat(hero.stars)}</span>`:'';
-  return `<div class="card" id="card"><div class="ch"><div>
+  const rarCol={Mythical:'#ff6b5a',Legendary:'#f0cf7a',Epic:'#d77cf2',Rare:'#7fb6ff',Uncommon:'#7be07a'}, affCol={Void:'#d4a6ff',Magic:'#7fb6ff',Force:'#ff8a7a',Spirit:'#7be07a'};
+  const cChips=[champ.rarity?`<span class="chip" style="border-color:${rarCol[champ.rarity]||'#2e3850'};color:${rarCol[champ.rarity]||'#d9dee8'}">${champ.rarity}</span>`:'',
+    champ.affinity?`<span class="chip" style="border-color:${affCol[champ.affinity]};color:${affCol[champ.affinity]}">${champ.affinity}</span>`:'',
+    champ.faction?`<span class="chip">${esc(champ.faction)}</span>`:'', champ.role?`<span class="chip">${esc(champ.role)}</span>`:''].join('');
+  const rCol={Mythical:'#e0452f',Legendary:'#d98a1f',Epic:'#a24fd0',Rare:'#2f6fd0',Uncommon:'#3a9a3a'};
+  const relicBody=relic.name?`<div class="relic"><img class="art" src="${relic.img}"><div><div class="rn">${esc(relic.name)}</div>
+      ${relic.rarity?`<span class="myth" style="background:${rCol[relic.rarity]||'#555'}">${relic.rarity}</span>`:''} <span style="color:#f0cf7a">${'★'.repeat(relic.stars||0)} ${esc(relic.level||'')}</span>
+      <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
+      <div class="rd">${esc(relic.desc)}</div><img class="sets" src="${relic.sets}">`:`<div class="empty"><b>Relic</b>not added yet</div>`;
+  const blessBody=bless.name?`<div class="bl"><img src="${bless.img}" style="width:74px;border:none;border-radius:0"><div><div class="n" style="color:#fff">${esc(bless.name)} ${bstars}</div><div style="font-size:13px;color:#8c97ae">Blessing</div></div></div>`
+      :`<div class="bl"><div class="ph"></div><div><div class="n">Blessing ${bstars}</div><div style="font-size:13px;color:#5d6880">not added yet</div></div></div>`;
+  return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
-    <div class="chips">${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div>${headRight}</div>
+    <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
     <div class="row2">
       <div class="panel"><div class="pt">Gear<small><span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
-      <div class="panel"><div class="pt">Relic</div><div class="empty"><b>Relic</b>not added yet</div>
-        <div class="bl"><div class="ph"></div><div><div class="n">Blessing ${bstars}</div><div style="font-size:13px;color:#5d6880">not added yet</div></div></div></div>
+      <div class="panel"><div class="pt">Relic</div>${relicBody}${blessBody}</div>
     </div>
     <div class="row2">
       <div class="panel"><div class="pt">Total Stats${tTag}</div>${table}${tNote}</div>
@@ -479,6 +584,7 @@ document.addEventListener('paste',e=>{
   const items=[...(e.clipboardData||{}).items||[]].filter(i=>i.type.startsWith('image/'));
   if(!active){ if(items.length){e.preventDefault();handleBulk(items.map(i=>i.getAsFile()));} return; }
   const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
+  if(it&&(active.id==='rpanel'||active.id==='bpanel')){e.preventDefault();active._go(it.getAsFile());return;}
   if(it&&active.id==='mpanel'){e.preventDefault();window._goMasteries(it.getAsFile());return;}
   if(it&&active.id==='tpanel'){e.preventDefault();clearTotals();loadImg(it.getAsFile()).then(img=>{queue.push({totals:true,img});setTBadge('busy','queued');pump();});return;}
   if(it){e.preventDefault();handle(active,it.getAsFile());}
@@ -506,11 +612,17 @@ async function pump(){
       if(job.totals){ await processTotals(img); }
       else{
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
-        if(job.kindWant==='masteries'){ if(kind==='masteries')processMasteries(img); else { const e=document.getElementById('mErr');
+        if(job.kindWant==='relic'||job.kindWant==='skills'){ const p=job.kindWant==='relic'?'r':'b';
+          if(kind===job.kindWant){ if(p==='r')await processRelic(img); else await processBlessing(img); }
+          else { const e=document.getElementById(p+'Err'); e.innerHTML=p==='r'?'⚠ This isn\'t the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.':'⚠ This isn\'t the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.';
+            e.style.display='block'; setBadgeId(p+'Badge','bad','wrong screenshot'); document.getElementById(p+'Drop').style.display='none'; document.getElementById(p+'panel').classList.add('filled'); } }
+        else if(job.kindWant==='masteries'){ if(kind==='masteries')processMasteries(img); else { const e=document.getElementById('mErr');
             e.innerHTML='⚠ This doesn\'t look like the <b>Masteries</b> screen. Open the champion\'s Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.'; e.style.display='block';
             setBadgeId('mBadge','bad','wrong screenshot'); document.getElementById('mDrop').style.display='none'; document.getElementById('mpanel').classList.add('filled'); } }
         else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
         else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
+        else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
+        else if(kind==='skills'){ clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} }
         else if(job.tag){ job.tag.className='no'; job.tag.textContent=`✗ ${job.name}: not recognised`; }
       }
     }catch(err){console.error(err);}
