@@ -142,7 +142,8 @@ input[type=file]{display:none}
 .card .rpan{flex:1;display:flex;flex-direction:column}
 .card .rpan .relic img.art{width:190px;height:228px}
 .card .rpan .rn{font-size:30px}.card .rpan .rd{font-size:18px;line-height:1.65;margin:16px 0}
-.card .rpan .rs div{padding:8px 14px}.card .rpan .rs b{font-size:20px}
+.card .rpan .rs{flex-wrap:wrap}.card .rpan .rs div{padding:6px 9px;min-width:62px}.card .rpan .rs b{font-size:18px;white-space:nowrap}
+.card .relic>div{min-width:0}
 .card .brow{display:flex;gap:18px;align-items:center}.card .brow img{width:96px;height:auto;display:block;flex:none}
 .card .brow .ph{width:84px;height:96px;border:1.5px dashed #3a4660;border-radius:12px}
 .card .brow .bl2{font-family:Cardo,serif;font-size:16px;color:#7f8aa3;letter-spacing:1.5px}
@@ -304,20 +305,26 @@ function highlightSlot(img){
 function aspectOk(img){return Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.03;}
 function aspectNote(img,name){const log=document.getElementById('blog');const t=document.createElement('span');t.className='no';
   t.textContent=`⚠ ${name||'screenshot'} is ${img.naturalWidth}×${img.naturalHeight}, not a 16:9 game screen — if it reads wrong, take it in full screen or with Alt+PrintScreen`;log.appendChild(t);}
+async function identifySlot(img){
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const t=(await worker.recognize(crop(img,25,0,475,125,2,'bw'))).data.text;
+  for(const k of Object.keys(ARMOR)) if(new RegExp('\\b'+k+'\\b','i').test(t)) return ARMOR[k];
+  if(!/set\s*[:;]/i.test(t)) return highlightSlot(img);                 // not an item window → old check
+  // accessory (the game shows the faction instead of the slot): which of the bottom three is highlighted
+  const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
+  const hot=(x,y)=>{x=Math.round(x*s);y=Math.round(y*s);const k=(y*W+x)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>178&&(mx-mn)/mx>0.5;};
+  const sc=CELLS.slice(6).map(([x0,y0,x1,y1])=>{let n=0,t2=0;for(let q=5;q<13;q++){for(let x=x0-q;x<x1+q;x+=2){t2+=2;n+=hot(x,y0-q)+hot(x,y1+q);}for(let y=y0-q;y<y1+q;y+=2){t2+=2;n+=hot(x0-q,y)+hot(x1+q,y);}}return n/t2;});
+  const o=sc.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  return (o[0][0]>0.1&&o[0][0]>1.5*o[1][0])?SLOTS[6+o[0][1]]:null;
+}
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
 async function handleBulk(files){
-  const log=document.getElementById('blog'); log.innerHTML='';
-  const used={};
+  const log=document.getElementById('blog'); log.innerHTML=''; const batch={used:{}};
   for(const f of files){
     let img; try{img=await loadImg(f);}catch(e){continue;}
-    const slot=highlightSlot(img);
-    const tag=document.createElement('span');
-    if(!slot){ tag.textContent=`… ${f.name}: checking`; queue.push({unknown:true,img,tag,name:f.name}); }
-    else if(used[slot]){tag.className='no';tag.textContent=`✗ ${f.name}: second ${slot} — skipped`;}
-    else{ used[slot]=1; const el=document.querySelector(`.slot[data-slot="${slot}"]`);
-      if(el.classList.contains('filled'))clearSlot(el);
-      queue.push({el,img}); badge(el,'busy','queued'); tag.className='ok'; tag.textContent=`✓ ${slot}`; }
-    log.appendChild(tag);
+    const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
+    queue.push({unknown:true,img,tag,name:f.name,batch});
   }
   pump();
 }
@@ -328,6 +335,68 @@ async function handleBulk(files){
   z.addEventListener('dragleave',()=>z.classList.remove('drag'));
   z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
 })();
+/* ---------- universal screenshot normaliser: finds the game, works out its scale and aspect,
+   and rebuilds a standard 1920x1080 view (left-, centre- and right-anchored parts placed correctly) ---------- */
+const REFK={"item":{"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352]],"storage":[[1025,356]],"equipped":[[238,378],[328,408]],"bonus":[[126,406]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]]},"totals":{"showing":[[1224,228]],"area":[[1312,226],[1694,306],[1606,226]],"basic":[[132,320]],"stats":[[194,320]],"artifacts":[[336,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320]],"total":[[1850,320],[149,992]],"guardians":[[984,334]],"rate":[[100,656]],"ignore":[[76,918]],"artifact":[[231,992],[524,992],[915,992]],"bonus":[[322,992]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"selected":[[1696,226]]},"masteries":{"offense":[[330,150]],"defense":[[960,150]],"support":[[1590,150]]},"relic":{"rank":[[147,133]],"info":[[1278,208]],"equipped":[[1629,224]],"relic":[[1738,222]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]],"champion":[[616,570],[194,1011]],"edit":[[1670,900]],"tavern":[[1246,922]],"reviews":[[617,941]],"vaults":[[312,1008]]},"skills":{"rank":[[147,132]],"info":[[1278,208]],"skills":[[1669,222]],"power":[[1251,336]],"level":[[1555,423],[1759,423],[1555,673],[1748,673]],"champion":[[616,570],[194,1011]],"lore":[[618,596]],"skins":[[1252,586]],"aura":[[1550,764]],"blessing":[[1787,764]],"reviews":[[617,941]],"tavern":[[1246,922]],"vaults":[[312,1008]],"battles":[[1579,1032]]}};
+function anchorOf(kind,x,y){
+  if(kind==='totals'||kind==='masteries')return 'C';
+  if(kind==='item')return x<520?'L':(x>=1420?'R':'C');
+  if(y<80)return 'C'; return x<720?'L':(x>=1150?'R':'C');           // relic / skills (champion screen)
+}
+const ABASE={L:0,C:960,R:1920};
+async function ocrWords(img){
+  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
+  const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  await worker.setParameters({tessedit_pageseg_mode:'11'});
+  const {data}=await worker.recognize(c);
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  return (data.words||[]).map(w=>({t:w.text.toLowerCase().replace(/[^a-z]/g,''),x:(w.bbox.x0+w.bbox.x1)/2/up,y:(w.bbox.y0+w.bbox.y1)/2/up})).filter(o=>o.t.length>=4);
+}
+function fitKind(kind,words,imgW){
+  const D=REFK[kind]; const O=words.filter(o=>D[o.t]); if(O.length<3)return null;
+  const M=[]; O.forEach(o=>D[o.t].forEach(r=>M.push({o,r,a:anchorOf(kind,r[0],r[1])})));
+  let best=null;
+  const evalH=(sc,y0,offs)=>{ const tol=14*Math.max(sc,0.5); const off={...offs};
+    // estimate missing anchor offsets from y-consistent words
+    ['L','C','R'].forEach(A=>{ if(off[A]!==undefined)return; const v=[];
+      M.forEach(m=>{ if(m.a===A&&Math.abs(m.o.y-(y0+sc*m.r[1]))<tol)v.push(m.o.x-sc*(m.r[0]-ABASE[A])); });
+      if(v.length){v.sort((a,b)=>a-b);off[A]=v[v.length>>1];} });
+    if(off.C===undefined){ if(off.L!==undefined)off.C=off.L+960*sc; else if(off.R!==undefined)off.C=off.R-960*sc; else return null; }
+    if(off.L===undefined)off.L=Math.max(0,Math.min(off.C-960*sc,off.C-imgW/2));
+    if(off.R===undefined)off.R=off.C+(off.C-off.L);
+    let n=0,res=0; const used=new Set();
+    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=y0+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
+      if(d<tol){n++;res+=d;used.add(m.o);} });
+    return {n,res,s:sc,y0,off};
+  };
+  for(let i=0;i<M.length;i++)for(let j=0;j<M.length;j++){ if(i===j||M[i].o===M[j].o)continue;
+    const a=M[i],b=M[j]; let sc=null;
+    if(Math.abs(b.r[1]-a.r[1])>120) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
+    else if(a.a===b.a&&Math.abs(b.r[0]-a.r[0])>200&&Math.abs(b.r[1]-a.r[1])<40) sc=(b.o.x-a.o.x)/(b.r[0]-a.r[0]);
+    if(!sc||sc<0.3||sc>1.8)continue;
+    const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
+    const h=evalH(sc,y0,offs); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
+  return best;
+}
+function drawNormalized(img,kind,F){
+  const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
+  const strip=(xa,xb,ya,yb,A)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),F.y0+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
+  if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
+  else if(kind==='item'){ strip(0,520,0,1080,'L'); strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); }
+  else { strip(0,1920,0,80,'C'); strip(0,720,80,1080,'L'); strip(720,1150,80,1080,'C'); strip(1150,1920,80,1080,'R'); }
+  return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
+}
+async function autoNormalize(img){
+  setStatus('Finding the game in the screenshot…');
+  const words=await ocrWords(img); let best=null,bk=null;
+  for(const k of Object.keys(REFK)){ const f=fitKind(k,words,img.naturalWidth); if(f&&(!best||f.n>best.n)){best=f;bk=k;} }
+  if(!best||best.n<3)return {img,kind:null};
+  const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
+  if(plain)return {img,kind:bk};
+  return {img:await drawNormalized(img,bk,best),kind:bk,fit:best};
+}
 /* ---------- find the game inside any screenshot (taskbar, window borders, smaller window) ---------- */
 const REFWORDS={"rate":[[105,173],[1524,917],[105,237],[100,656]],"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363],[336,320]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352],[231,992],[524,992],[915,992]],"storage":[[1025,356]],"equipped":[[238,378],[328,408],[1629,224]],"bonus":[[126,406],[322,992]],"total":[[1664,702],[1850,320],[149,992]],"stats":[[1735,702],[194,320]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"showing":[[1224,228]],"basic":[[132,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320],[1738,222]],"guardians":[[984,334]],"ignore":[[76,918]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"offense":[[330,150]],"defense":[[960,150],[1250,162]],"support":[[1590,150]],"info":[[1278,208]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]]};
 async function locateGame(img,upForce,bin){
@@ -437,6 +506,7 @@ async function processTotals(img){
   const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   if(/^\W*area\s*selected\W*$/i.test(area))area='No Area Selected';
+  { const r=rows[8]; if(r&&!r.cells.some(Boolean)){ r.cells[0]='0%'; r.cells[10]='0%'; r.ok=true; } }
   totals.rows=rows; totals.area=area; renderTotals();
   const bad=rows.filter(r=>!r.ok).length;
   setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
@@ -498,7 +568,8 @@ async function screenKind(img){
   const a=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
   let kind=/total\s*stats/i.test(a)?'totals':null;
   if(!kind){const b=(await worker.recognize(crop(img,180,110,320,65,1.5,'bw'))).data.text; if(/offen[sc]e/i.test(b))kind='masteries';}
-  if(!kind){const c=(await worker.recognize(crop(img,1440,200,460,40,2,'bw'))).data.text; if(/equipped\s*relic/i.test(c))kind='relic'; else if(/skills/i.test(c))kind='skills';}
+  if(!kind){ for(const m of ['bw','inv']){ const c=(await worker.recognize(crop(img,1440,200,460,40,2,m))).data.text;
+      if(/equip\w*\s*rel/i.test(c)){kind='relic';break;} if(/skil/i.test(c)){kind='skills';break;} } }
   await worker.setParameters({tessedit_pageseg_mode:'6'}); return kind;
 }
 (()=>{const p=document.getElementById('mpanel'),fi=document.getElementById('mFile');
@@ -521,10 +592,13 @@ function cropURL(img,x,y,w,h,type){const s=img.naturalWidth/1920,c=document.crea
 function rarityByColor([r,g,b]){ // label background colours used by the game
   if(r>200&&g<110&&b<90)return 'Mythical'; if(r>200&&g>110&&g<175&&b<80)return 'Legendary';
   if(r>150&&b>150&&g<110)return 'Epic'; if(b>170&&r<110)return 'Rare'; if(g>160&&r<120&&b<120)return 'Uncommon'; return '';}
-function affinityByColor(px){ let c={Void:0,Magic:0,Force:0,Spirit:0};
-  for(let x=605;x<645;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
+function affinityByColor(px){ // the icon sits just left of the champion name; the name is centred, so find it first
+  let x0=null; for(let x=420;x<1000&&x0===null;x+=2){let n=0;for(let y=24;y<56;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx>150&&mx-mn>80)n++;} if(n>=3)x0=x;}
+  if(x0===null)return '';
+  let c={Void:0,Magic:0,Force:0,Spirit:0};
+  for(let x=x0;x<x0+40;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
     if(r>130&&b>130&&g<100)c.Void++; else if(b>r+40&&b>g)c.Magic++; else if(r>g+60&&r>b+60)c.Force++; else if(g>r+40&&g>b)c.Spirit++;}
-  const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>20?best[0]:''; }
+  const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>12?best[0]:''; }
 const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
 function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
@@ -559,9 +633,26 @@ async function processRelic(img){
   relic.name=(await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
   relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1');
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  const st=(await worker.recognize(crop(img,1455,530,375,65,2,'bw'))).data.text.split('\n').map(l=>l.trim()).filter(Boolean);
-  const names=(st[0]||'').split(/\s+/).filter(Boolean), vals=(st[1]||'').split(/\s+/).filter(Boolean);
-  relic.stats=names.map((n,i)=>[n.replace(/[^A-Z.%]/gi,'').toUpperCase(),(vals[i]||'').replace(/[^\d+%]/g,'')]);
+  // bonus boxes: read each box separately (name on top, value below), try two treatments, keep what makes sense
+  const RNAMES=['HP','ATK','DEF','SPD','ACC','RES','C. RATE','C. DMG'];
+  const snapStat=t=>{t=t.toUpperCase().replace(/[^A-Z.]/g,''); if(/RATE/.test(t))return 'C. RATE'; if(/DMG|DM6/.test(t))return 'C. DMG';
+    let best=['',9]; for(const n of ['HP','ATK','DEF','SPD','ACC','RES']){const v=lev(t,n); if(v<best[1])best=[n,v];} return best[1]<=1?best[0]:''; };
+  relic.stats=[];
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  for(const cx of [1516,1638,1760]){
+    let nm='',val='';
+    for(const m of ['bw','inv']){
+      if(!nm){ nm=snapStat((await worker.recognize(crop(img,cx-55,532,110,28,3,m))).data.text); }
+      if(!val){ await worker.setParameters({tessedit_char_whitelist:'0123456789+,%'});
+        const v=(await worker.recognize(crop(img,cx-58,558,116,36,3,m))).data.text.replace(/[^\d+,%]/g,'');
+        await worker.setParameters({tessedit_char_whitelist:''}); if(/^\+?\d[\d,]*%?$/.test(v))val=v.startsWith('+')?v:'+'+v; }
+    }
+    if(!nm){ await worker.setParameters({tessedit_pageseg_mode:'8',tessedit_char_whitelist:'ACDEFGHKMPRST.'});
+      for(const m of ['bw','inv']){ if(!nm)nm=snapStat((await worker.recognize(crop(img,cx-55,532,110,28,3,m))).data.text); }
+      await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:''}); }
+    if(nm||val)relic.stats.push([nm,val]);
+  }
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
   relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').trim();
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
@@ -700,11 +791,19 @@ function handle(el,f){
 }
 async function pump(){
   if(busy||!worker||!queue.length)return; busy=true;
-  const job=queue.shift(); const {el,img}=job;
+  const job=queue.shift();
+  if(!job.prepped&&!job.normalized){ try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
+  const {el,img}=job;
   if(job.totals||job.kindWant||job.unknown){
     try{
       if(job.totals){ await processTotals(img); }
       else{
+        if(job.unknown){ const hl=(job.kindGuess==='item'||!job.kindGuess)?await identifySlot(img):null;
+          if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`);
+            if(job.batch&&job.batch.used[hl]){ if(job.tag){job.tag.className='no';job.tag.textContent=`✗ ${job.name}: second ${hl} — skipped`;} }
+            else { if(job.batch)job.batch.used[hl]=1; if(el2.classList.contains('filled'))clearSlot(el2);
+              queue.unshift({el:el2,img,prepped:true,normalized:true}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl}`;} }
+            busy=false; pump(); return; } }
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
         if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
           if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
@@ -720,7 +819,8 @@ async function pump(){
             if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`); if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:img2}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (game found in the picture)`;} }
             else queue.unshift({unknown:true,img:img2,tag:job.tag,name:job.name,normalized:true}); }
           else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; } }
-        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; }
+        else if(job.kindGuess==='relic'||job.kindGuess==='skills'){ await readChampDetails(img); await heroFromHeader(img,'champion screen'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${job.name}: champion details (name, rarity, faction, role)`;} }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — for the Blessing, open the champion from your own roster (Skills tab), not from the Champion Index`; }
       }
     }catch(err){console.error(err);}
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
@@ -737,7 +837,7 @@ async function pump(){
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
-    let bad=checkSlot(el,item,data.text,highlightSlot(img));
+    let bad=checkSlot(el,item,data.text,(job.kindGuess==='item'||!job.kindGuess)?await identifySlot(img):null);
     if(bad&&bad.probe&&!job.normalized){ const img2=await findGame(img);
       if(img2){ queue.unshift({el,img:img2,normalized:true}); busy=false; pump(); return; } }
     if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
