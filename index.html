@@ -300,12 +300,16 @@ function highlightSlot(img){
   const sure=order[0][0]>0.15 && order[0][0]-order[1][0]>0.08;
   return sure?SLOTS[order[0][1]]:null;
 }
+function aspectOk(img){return Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.03;}
+function aspectNote(img,name){const log=document.getElementById('blog');const t=document.createElement('span');t.className='no';
+  t.textContent=`⚠ ${name||'screenshot'} is ${img.naturalWidth}×${img.naturalHeight}, not a 16:9 game screen — if it reads wrong, take it in full screen or with Alt+PrintScreen`;log.appendChild(t);}
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
 async function handleBulk(files){
   const log=document.getElementById('blog'); log.innerHTML='';
   const used={};
   for(const f of files){
     let img; try{img=await loadImg(f);}catch(e){continue;}
+    if(!aspectOk(img))aspectNote(img,f.name);
     const slot=highlightSlot(img);
     const tag=document.createElement('span');
     if(!slot){ tag.textContent=`… ${f.name}: checking`; queue.push({unknown:true,img,tag,name:f.name}); }
@@ -362,6 +366,7 @@ async function readRow(img,y){
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
 }
+const TIP=' <span style="color:#8c97ae">Tip: the game must fill the whole screenshot — no taskbar or window borders. Play in full screen, or click the game window and press <b>Alt+PrintScreen</b>.</span>';
 const KNAME={totals:'Total Stats',masteries:'Masteries',relic:'Relic',skills:'Blessing'};
 const PNAME={t:'Total Stats',m:'Masteries',r:'Relic',b:'Blessing'};
 const PCLEAR={t:()=>clearTotals(),m:()=>clearMasteries(),r:()=>clearPanel('r',relic),b:()=>clearPanel('b',bless)};
@@ -375,10 +380,10 @@ function panelWrong(p,help,t,img){
   e.style.display='block'; setBadgeId(p+'Badge','bad','wrong screenshot'); document.getElementById(p+'Drop').style.display='none'; document.getElementById(p+'panel').classList.add('filled');
   const b=e.querySelector('.mv'); if(b)b.addEventListener('click',ev=>{ev.stopPropagation();PCLEAR[p]();sendTo(t,img);});
 }
-const PHELP={t:`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`,
-  m:`This doesn't look like the <b>Masteries</b> screen. Open the champion's Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.`,
-  r:`This isn't the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.`,
-  b:`This isn't the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.`};
+const PHELP={t:`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`+TIP,
+  m:`This doesn't look like the <b>Masteries</b> screen. Open the champion's Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.`+TIP,
+  r:`This isn't the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.`+TIP,
+  b:`This isn't the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.`+TIP};
 async function processTotals(img){
   const tp=document.getElementById('tpanel'); setTBadge('busy','reading…'); setStatus('Reading Total Stats…');
   await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -388,6 +393,7 @@ async function processTotals(img){
   let area=(await worker.recognize(crop(img,1525,190,350,72,2,'bw'))).data.text.replace(/\s+[vV]+\W*$/,'').replace(/[^A-Za-z' \-]/g,'').trim();
   const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
   await worker.setParameters({tessedit_pageseg_mode:'6'});
+  if(/^\W*area\s*selected\W*$/i.test(area))area='No Area Selected';
   totals.rows=rows; totals.area=area; renderTotals();
   const bad=rows.filter(r=>!r.ok).length;
   setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
@@ -563,7 +569,7 @@ function buildCard(){
   const cls=j=>j===9?'ar':(j===10?'tot':'');
   const has=!!totals.rows, tcolor=j=>j===1||j===9?'g':(j===0?'w':(j===10?'':'w'));
   const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>{const v=has?(totals.rows[i].cells[j]||''):'·';return `<td class="${cls(j)} ${has?tcolor(j):''}">${esc(v)}</td>`;}).join('')}</tr>`).join('')}</table>`;
-  const area=(totals.area||'').trim(), noArea=!area||/no\s*area/i.test(area);
+  const area=(totals.area||'').trim(), noArea=!area||/no\s*area/i.test(area)||/^\W*area\s*selected\W*$/i.test(area);
   const headRight=has?(noArea?`<div class="ctx"><div class="l">Area Bonuses</div><div class="v" style="color:#7f8aa3">None</div><div class="abadge" style="border-color:#3a4660;background:#1b2333;color:#8c97ae">Total Stats without area bonuses</div></div>`
      :`<div class="ctx"><div class="l">Area Bonuses</div><div class="v">${esc(area)}</div><div class="abadge">✓ Included in Total Stats</div></div>`):'';
   const tTag=has?`<span class="sab">Showing Area Bonuses for: <b style="color:#9fe6dc">${esc(area||'No Area Selected')}</b></span>`:`<span class="sab">Area Bonuses: not added yet</span>`;
@@ -637,7 +643,7 @@ function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge
 })();
 
 function handle(el,f){
-  const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
+  const img=new Image(); img.onload=()=>{ if(!aspectOk(img))aspectNote(img,f.name);queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
 }
 async function pump(){
   if(busy||!worker||!queue.length)return; busy=true;
@@ -654,7 +660,7 @@ async function pump(){
         else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
         else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
         else if(kind==='skills'){ clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} }
-        else if(job.tag){ job.tag.className='no'; job.tag.textContent=`✗ ${job.name}: not recognised`; }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure the game fills the whole screenshot (full screen or Alt+PrintScreen)`; }
       }
     }catch(err){console.error(err);}
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
@@ -772,7 +778,7 @@ const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banne
 function checkSlot(el,item,text,hl){
   const want=el.dataset.slot;
   if(hl) return hl===want?null:{msg:`This is the <b>${hl}</b> screenshot, not ${want}.`,move:hl};
-  if(!item.set && !item.main) return {probe:true,msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`};
+  if(!item.set && !item.main) return {probe:true,msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`+TIP};
   const found=Object.keys(ARMOR).find(k=>new RegExp('\\b'+k+'\\b','i').test(text));
   const isAcc=!!ACC_MAIN[want];
   if(found){
