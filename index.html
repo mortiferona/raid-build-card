@@ -66,6 +66,17 @@ input[type=file]{display:none}
 .bulk small{color:#8c97ae;font-size:12px}
 .blog{margin-top:8px;font-size:13px;color:#aeb6c6;display:flex;flex-wrap:wrap;gap:6px}
 .blog span{padding:3px 9px;border-radius:999px;background:#1b2333}.blog span.ok{color:#7be07a}.blog span.no{color:#ff9a9a}
+ .tpanel{margin-top:22px;border:1px solid #2a3448;border-radius:14px;background:rgba(18,24,35,.9);padding:16px;position:relative}
+.tpanel.filled .sx{display:inline-block}
+.tpanel .tbl{display:none;margin-top:12px;overflow-x:auto}
+.tpanel table{border-collapse:collapse;width:100%;font-size:13px}
+.tpanel th{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:#7f8aa3;font-weight:600;padding:4px 3px;text-align:right;line-height:1.2;vertical-align:bottom}
+.tpanel td{padding:2px 3px}.tpanel td.rk{color:#c3cad8;font-weight:600;white-space:nowrap;padding-right:8px}
+.tpanel td input{text-align:right;padding:4px 5px;min-width:58px}
+.tpanel tr.bad td input{border-color:#e0b24a;background:rgba(224,178,74,.08)}
+.tpanel tr.bad td.rk{color:#f0cf7a}
+.tpanel .area{display:none;margin-top:10px;font-size:13px;color:#8c97ae;align-items:center;gap:8px}
+.tpanel .area input{width:260px}
 .actions{position:fixed;right:18px;bottom:18px;z-index:20;display:flex;gap:12px}
 .actions .big{box-shadow:0 6px 18px rgba(0,0,0,.6)}
 .big{font-size:16px;padding:12px 22px;border-radius:12px;font-weight:600}
@@ -112,6 +123,12 @@ input[type=file]{display:none}
 .card .bl{display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid #232c3d}
 .card .bl .ph{width:60px;height:60px;border-radius:8px;border:1.5px dashed #3a4660}
 .card .bl .n{font-size:19px;font-weight:700;color:#7f8aa3}
+.card .ch{justify-content:space-between}
+.card .ctx{text-align:right}.card .ctx .l{font-size:14px;letter-spacing:3px;color:#7f8aa3;text-transform:uppercase}
+.card .ctx .v{font-family:Cardo,serif;font-size:34px;color:#7fd3c8}
+.card .abadge{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;border:1px solid #3f8f86;background:rgba(127,211,200,.12);color:#9fe6dc;font-size:16px;font-weight:600}
+.card td.w{color:#e1e5ee}.card td.g{color:#7be07a}.card td.tot{color:#f0cf7a;font-weight:800;font-size:18px}
+.card th.ar,.card td.ar{background:rgba(127,211,200,.10)}.card th.tot,.card td.tot{background:rgba(201,162,74,.10)}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
@@ -120,10 +137,10 @@ input[type=file]{display:none}
 <div class="reset"><div class="ask" id="askReset">Start over and clear everything? <button class="yes" id="yesReset">Yes, clear</button><button id="noReset">No</button></div><button class="x" id="btnReset" title="Start over">✕</button></div>
 <div class="wrap">
   <h1>Raid Build Card</h1>
-  <div class="sub">Step 1 · Gear — upload one in-game screenshot per slot</div>
+  <div class="sub">Turn your in-game screenshots into one clean build card</div>
   <div class="howto">
-    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one screenshot per item.<br>
-    Drop <b>all of them at once</b> in the gold box below and each goes to its slot by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
+    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one per item, plus the <b>Total Stats</b> screen and the <b>Masteries</b> screen.<br>
+    Drop <b>all of them at once</b> in the gold box below and each goes to its place by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
     Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
   </div>
   <div class="hero">
@@ -132,10 +149,27 @@ input[type=file]{display:none}
     <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
     <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
   </div>
-  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all 9 item screenshots in the file window with Ctrl+A</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats and Masteries</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
   <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
   <div class="grid" id="grid"></div>
+  <div class="tpanel" id="tpanel" tabindex="0">
+    <button class="sx" id="tClear" title="Remove Total Stats">✕</button>
+    <div class="sh"><span class="sn">Total Stats</span><span class="badge" id="tBadge">empty</span></div>
+    <div class="drop" id="tDrop">Drop the <b>Total Stats</b> screenshot here (the table with all bonus columns)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="tFile" accept="image/*">
+    <div class="err" id="tErr"></div>
+    <div class="area" id="tArea">Showing Area Bonuses for: <input id="tAreaIn"></div>
+    <div class="tbl" id="tTbl"></div>
+  </div>
+  <div class="tpanel" id="mpanel" tabindex="0">
+    <button class="sx" id="mClear" title="Remove Masteries">✕</button>
+    <div class="sh"><span class="sn">Masteries</span><span class="badge" id="mBadge">empty</span></div>
+    <div class="drop" id="mDrop">Drop the <b>Masteries</b> screenshot here (the Offense / Defense / Support trees)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="mFile" accept="image/*">
+    <div class="err" id="mErr"></div>
+    <div id="mView" style="display:none;margin-top:12px;align-items:center;gap:16px"><img id="mImg" style="height:220px;border-radius:8px;border:1px solid #2a3448"><div id="mCnt" style="font-size:15px;color:#c3cad8;line-height:1.8"></div></div>
+  </div>
   <div class="actions"><button class="big gold" id="btnPreview">Preview card</button></div>
 </div>
 <div class="modal" id="modal"><div class="bar"><button class="big gold" id="btnSave">Download PNG</button><button class="big" id="btnClose">Close</button></div><div class="stage" id="stage"></div></div>
@@ -206,6 +240,7 @@ function clearSlot(el){
     if(s._hero&&hero.name&&s._hero.name.toLowerCase()!==hero.name.toLowerCase()){m.textContent=`⚠ This screenshot is from ${s._hero.name}, not ${hero.name}.`;m.style.display='block';}else m.style.display='none';});
 }
 function resetAll(){
+  clearTotals(); clearMasteries();
   queue.length=0;
   for(const k in state)delete state[k];
   setHero(null,'');
@@ -238,7 +273,7 @@ async function handleBulk(files){
     let img; try{img=await loadImg(f);}catch(e){continue;}
     const slot=highlightSlot(img);
     const tag=document.createElement('span');
-    if(!slot){tag.className='no';tag.textContent=`✗ ${f.name}: not an item screenshot`;}
+    if(!slot){ tag.textContent=`… ${f.name}: checking`; queue.push({unknown:true,img,tag,name:f.name}); }
     else if(used[slot]){tag.className='no';tag.textContent=`✗ ${f.name}: second ${slot} — skipped`;}
     else{ used[slot]=1; const el=document.querySelector(`.slot[data-slot="${slot}"]`);
       if(el.classList.contains('filled'))clearSlot(el);
@@ -253,6 +288,127 @@ async function handleBulk(files){
   z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
   z.addEventListener('dragleave',()=>z.classList.remove('drag'));
   z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
+})();
+/* ---------- Total Stats ---------- */
+const TROWS=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
+const TCOLS=['Basic Stats','Artifacts','Affinity Bonuses','Classic Arena','Masteries','Faction Guardians','Empowerment','Blessing','Relic','Area Bonuses','Total'];
+const TRIGHT=[222,382,541,700,860,1038,1252,1401,1560,1720,1878];
+const TROWY=[396,461,526,591,656,721,786,851,916];
+const totals={rows:null,area:''};
+function crop(img,x,y,w,h,k,mode){
+  const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,x*s,y*s,w*s,h*s,0,0,c.width,c.height);
+  if(mode){const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+    for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11; const v=mode==='bw'?(l>140?0:255):mode==='bw2'?(l>175?0:255):(255-l); p[i]=p[i+1]=p[i+2]=v;} g.putImageData(d,0,0);}
+  return c;
+}
+const tnum=v=>{v=String(v||'').replace(/[,+%\s]/g,'');return v===''?null:(isNaN(+v)?NaN:+v);};
+function rowCells(words){
+  const cells=Array(11).fill('');
+  words.forEach(w=>{ if(!/\d/.test(w.text))return; const t=w.text.replace(/[^\d,.%+\-]/g,''); if(!t)return;
+    const xr=w.right; let best=0; TRIGHT.forEach((r,i)=>{if(Math.abs(r-xr)<Math.abs(TRIGHT[best]-xr))best=i;});
+    if(Math.abs(TRIGHT[best]-xr)<70) cells[best]=(best>0&&best<10&&/^\d/.test(t))?'+'+t:t; });
+  return cells;
+}
+function rowOk(c){ if(!c[10]||!c[0])return false; let sum=0; for(let j=0;j<10;j++){const n=tnum(c[j]); if(n===null)continue; if(isNaN(n))return false; sum+=n;}
+  const t=tnum(c[10]); return !isNaN(t)&&t!==null&&Math.abs(sum-t)<0.6; }
+async function readRow(img,y){
+  const out=[];
+  for(const mode of ['inv','bw','bw2']){
+    const c=crop(img,0,y-30,1900,60,mode==='bw2'?3:2,mode==='bw2'?'bw2':mode);
+    const k=mode==='bw2'?3:2;
+    const {data}=await worker.recognize(c);
+    const words=(data.words||[]).map(w=>({text:w.text,right:(w.bbox.x1/k)}));
+    const cells=rowCells(words); out.push(cells); if(rowOk(cells))return {cells,ok:true};
+    // merge with earlier readings: fill blanks
+    const m=Array(11).fill('').map((_,j)=>out.map(o=>o[j]).find(Boolean)||'');
+    if(rowOk(m))return {cells:m,ok:true};
+  }
+  const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
+  return {cells:best,ok:false};
+}
+async function processTotals(img){
+  const tp=document.getElementById('tpanel'); setTBadge('busy','reading…'); setStatus('Reading Total Stats…');
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const head=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
+  if(!/total\s*stats/i.test(head)){ await worker.setParameters({tessedit_pageseg_mode:'6'});
+    tErr(`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`); return; }
+  let area=(await worker.recognize(crop(img,1525,190,350,72,2,'bw'))).data.text.replace(/\s+[vV]+\W*$/,'').replace(/[^A-Za-z' \-]/g,'').trim();
+  const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  totals.rows=rows; totals.area=area; renderTotals();
+  const bad=rows.filter(r=>!r.ok).length;
+  setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
+}
+function setTBadge(c,t){const b=document.getElementById('tBadge');b.className='badge '+c;b.textContent=t;}
+function tErr(msg){const e=document.getElementById('tErr');e.innerHTML='⚠ '+msg;e.style.display='block';setTBadge('bad','wrong screenshot');
+  document.getElementById('tDrop').style.display='none';document.getElementById('tpanel').classList.add('filled');}
+function renderTotals(){
+  document.getElementById('tDrop').style.display='none'; document.getElementById('tErr').style.display='none';
+  const a=document.getElementById('tArea'); a.style.display='flex'; document.getElementById('tAreaIn').value=totals.area;
+  const t=document.getElementById('tTbl'); t.style.display='block';
+  t.innerHTML='<table><tr><th></th>'+TCOLS.map(c=>`<th>${c}</th>`).join('')+'</tr>'+
+    totals.rows.map((r,i)=>`<tr class="${r.ok?'':'bad'}" data-i="${i}"><td class="rk">${TROWS[i]}</td>${r.cells.map((v,j)=>`<td><input data-j="${j}" value="${v}"></td>`).join('')}</tr>`).join('')+'</table>';
+}
+document.addEventListener('input',e=>{
+  const inp=e.target; if(inp.id==='tAreaIn'){totals.area=inp.value.trim();return;}
+  const tr=inp.closest&&inp.closest('#tTbl tr'); if(!tr)return;
+  const r=totals.rows[+tr.dataset.i]; r.cells[+inp.dataset.j]=inp.value.trim(); r.ok=rowOk(r.cells); tr.classList.toggle('bad',!r.ok);
+  const bad=totals.rows.filter(x=>!x.ok).length; setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓');
+});
+function clearTotals(){ totals.rows=null; totals.area=''; const tp=document.getElementById('tpanel'); tp.classList.remove('filled');
+  ['tArea','tTbl','tErr'].forEach(id=>document.getElementById(id).style.display='none'); document.getElementById('tDrop').style.display=''; setTBadge('','empty'); }
+(()=>{const tp=document.getElementById('tpanel'),fi=document.getElementById('tFile');
+  document.getElementById('tDrop').addEventListener('click',()=>fi.click());
+  document.getElementById('tClear').addEventListener('click',e=>{e.stopPropagation();clearTotals();});
+  fi.addEventListener('change',async()=>{if(fi.files[0]){const img=await loadImg(fi.files[0]);queue.push({totals:true,img});setTBadge('busy','queued');pump();}fi.value='';});
+  tp.addEventListener('dragover',e=>{e.preventDefault();tp.classList.add('drag');});
+  tp.addEventListener('dragleave',()=>tp.classList.remove('drag'));
+  tp.addEventListener('drop',async e=>{e.preventDefault();tp.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f){clearTotals();const img=await loadImg(f);queue.push({totals:true,img});setTBadge('busy','queued');pump();}});
+  tp.addEventListener('click',()=>{document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));active=tp;tp.classList.add('active');});
+})();
+/* ---------- Masteries ---------- */
+const MTREES=[['Offense',25,[125,262,398,534]],['Defense',655,[756,892,1028,1164]],['Support',1285,[1386,1522,1658,1794]]];
+const MROWS=[249,395,541,687,833,979];
+const mast={img:null,counts:null};
+function countMasteries(img){
+  const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
+  return MTREES.map(([name,,xs])=>{let lit=0;MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{if(ri===0&&(ci===0||ci===3))return;
+    let n=0,t=0;for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){const k=(Math.round((y+dy)*s)*W+Math.round((x+dx)*s))*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;}
+    if(n/t>0.25)lit++;}));return [name,lit];});
+}
+function processMasteries(img){
+  const counts=countMasteries(img); let use=counts.filter(c=>c[1]>0).map(c=>c[0]); if(!use.length)use=['Offense','Defense'];
+  const s=img.naturalWidth/1920, trees=MTREES.filter(t=>use.includes(t[0]));
+  const w=610,h=957,gap=10,c=document.createElement('canvas'); c.width=trees.length*w+(trees.length-1)*gap; c.height=h;
+  const g=c.getContext('2d'); trees.forEach((t,i)=>g.drawImage(img,t[1]*s,100*s,w*s,h*s,i*(w+gap),0,w,h));
+  mast.img=c.toDataURL('image/jpeg',0.9); mast.counts=counts;
+  document.getElementById('mDrop').style.display='none'; document.getElementById('mErr').style.display='none';
+  document.getElementById('mView').style.display='flex'; document.getElementById('mImg').src=mast.img;
+  document.getElementById('mCnt').innerHTML=counts.map(([n,v])=>`${n}: <b>${v}</b>`).join('<br>');
+  setBadgeId('mBadge','ok','read ✓'); document.getElementById('mpanel').classList.add('filled');
+}
+function setBadgeId(id,c,t){const b=document.getElementById(id);b.className='badge '+c;b.textContent=t;}
+function clearMasteries(){mast.img=null;mast.counts=null;const p=document.getElementById('mpanel');p.classList.remove('filled');
+  ['mView','mErr'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('mDrop').style.display='';setBadgeId('mBadge','','empty');}
+async function screenKind(img){
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const a=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
+  let kind=/total\s*stats/i.test(a)?'totals':null;
+  if(!kind){const b=(await worker.recognize(crop(img,180,110,320,65,1.5,'bw'))).data.text; if(/offen[sc]e/i.test(b))kind='masteries';}
+  await worker.setParameters({tessedit_pageseg_mode:'6'}); return kind;
+}
+(()=>{const p=document.getElementById('mpanel'),fi=document.getElementById('mFile');
+  const go=async f=>{clearMasteries();const img=await loadImg(f);queue.push({kindWant:'masteries',img});setBadgeId('mBadge','busy','queued');pump();};
+  document.getElementById('mDrop').addEventListener('click',()=>fi.click());
+  document.getElementById('mClear').addEventListener('click',e=>{e.stopPropagation();clearMasteries();});
+  fi.addEventListener('change',()=>{if(fi.files[0])go(fi.files[0]);fi.value='';});
+  p.addEventListener('dragover',e=>{e.preventDefault();p.classList.add('drag');});
+  p.addEventListener('dragleave',()=>p.classList.remove('drag'));
+  p.addEventListener('drop',e=>{e.preventDefault();p.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)go(f);});
+  p.addEventListener('click',()=>{document.querySelectorAll('.slot,.tpanel').forEach(s=>s.classList.remove('active'));active=p;p.classList.add('active');});
+  window._goMasteries=go;
 })();
 /* ---------- card preview & download ---------- */
 const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -277,19 +433,27 @@ function buildCard(){
   const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
   const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
   const cls=j=>j===9?'ar':(j===10?'tot':'');
-  const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map(r=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>`<td class="${cls(j)}">·</td>`).join('')}</tr>`).join('')}</table>`;
+  const has=!!totals.rows, tcolor=j=>j===1||j===9?'g':(j===0?'w':(j===10?'':'w'));
+  const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>{const v=has?(totals.rows[i].cells[j]||''):'·';return `<td class="${cls(j)} ${has?tcolor(j):''}">${esc(v)}</td>`;}).join('')}</tr>`).join('')}</table>`;
+  const area=(totals.area||'').trim(), noArea=!area||/no\s*area/i.test(area);
+  const headRight=has?(noArea?`<div class="ctx"><div class="l">Build</div><div class="v" style="font-size:26px">No Area Bonuses</div></div>`
+     :`<div class="ctx"><div class="l">Build for</div><div class="v">${esc(area)}</div><div class="abadge">✓ Stats include Area Bonuses</div></div>`):'';
+  const tTag=has?`<span class="sab">Showing Area Bonuses for: <b style="color:#9fe6dc">${esc(area||'No Area Selected')}</b></span>`:`<span class="sab">Area Bonuses: not added yet</span>`;
+  const tNote=has?`<div style="margin-top:14px;font-size:13px;color:#7f8aa3">The total Artifact bonus includes Artifact Set bonuses, individual Artifact bonuses, and Accessory bonuses.</div>`:'';
+  const mc=mast.counts?mast.counts.filter(c=>c[1]>0).map(c=>`${c[0]} ${c[1]}`).join(' · '):'';
+  const mBody=mast.img?`<img src="${mast.img}" style="width:100%;border-radius:10px;display:block">`:`<div class="empty" style="padding:120px 16px"><b>Masteries</b>not added yet</div>`;
   const bstars=hero.stars?`<span style="color:#ff3b3b;letter-spacing:1px">${'★'.repeat(hero.stars)}</span>`:'';
   return `<div class="card" id="card"><div class="ch"><div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
-    <div class="chips">${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>
+    <div class="chips">${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div>${headRight}</div>
     <div class="row2">
       <div class="panel"><div class="pt">Gear<small><span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
       <div class="panel"><div class="pt">Relic</div><div class="empty"><b>Relic</b>not added yet</div>
         <div class="bl"><div class="ph"></div><div><div class="n">Blessing ${bstars}</div><div style="font-size:13px;color:#5d6880">not added yet</div></div></div></div>
     </div>
     <div class="row2">
-      <div class="panel"><div class="pt">Total Stats<span class="sab">Area Bonuses: not added yet</span></div>${table}</div>
-      <div class="panel"><div class="pt">Masteries</div><div class="empty" style="padding:120px 16px"><b>Masteries</b>not added yet</div></div>
+      <div class="panel"><div class="pt">Total Stats${tTag}</div>${table}${tNote}</div>
+      <div class="panel"><div class="pt">Masteries${mc?`<small>${mc}</small>`:''}</div>${mBody}</div>
     </div>
     <div class="foot"><span>Raid: Shadow Legends</span><span>${esc(name)} · build card</span></div></div>`;
 }
@@ -315,6 +479,8 @@ document.addEventListener('paste',e=>{
   const items=[...(e.clipboardData||{}).items||[]].filter(i=>i.type.startsWith('image/'));
   if(!active){ if(items.length){e.preventDefault();handleBulk(items.map(i=>i.getAsFile()));} return; }
   const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
+  if(it&&active.id==='mpanel'){e.preventDefault();window._goMasteries(it.getAsFile());return;}
+  if(it&&active.id==='tpanel'){e.preventDefault();clearTotals();loadImg(it.getAsFile()).then(img=>{queue.push({totals:true,img});setTBadge('busy','queued');pump();});return;}
   if(it){e.preventDefault();handle(active,it.getAsFile());}
 });
 const setStatus=t=>document.getElementById('status').textContent=t;
@@ -334,7 +500,21 @@ function handle(el,f){
 }
 async function pump(){
   if(busy||!worker||!queue.length)return; busy=true;
-  const {el,img}=queue.shift();
+  const job=queue.shift(); const {el,img}=job;
+  if(job.totals||job.kindWant||job.unknown){
+    try{
+      if(job.totals){ await processTotals(img); }
+      else{
+        setStatus('Reading screenshot…'); const kind=await screenKind(img);
+        if(job.kindWant==='masteries'){ if(kind==='masteries')processMasteries(img); else { const e=document.getElementById('mErr');
+            e.innerHTML='⚠ This doesn\'t look like the <b>Masteries</b> screen. Open the champion\'s Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.'; e.style.display='block';
+            setBadgeId('mBadge','bad','wrong screenshot'); document.getElementById('mDrop').style.display='none'; document.getElementById('mpanel').classList.add('filled'); } }
+        else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
+        else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
+        else if(job.tag){ job.tag.className='no'; job.tag.textContent=`✗ ${job.name}: not recognised`; }
+      }
+    }catch(err){console.error(err);}
+    busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
   try{
     badge(el,'busy','reading…'); setStatus(`Reading ${el.dataset.slot}…`);
     const {bw,icon,valCrop,head,stars}=prep(img);
