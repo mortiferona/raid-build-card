@@ -60,6 +60,12 @@ input[type=file]{display:none}
 .err{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #6a3a3a;background:rgba(255,90,90,.08);color:#ffb3b3;font-size:13px;line-height:1.55}
 .err b{color:#fff}.err button{margin-top:8px;border-color:#7fd3c8;color:#9fe6dc}
 .badge.bad{background:rgba(255,90,90,.15);color:#ff9a9a}
+.bulk{margin-top:16px;border:2px dashed #c9a24a;border-radius:14px;padding:22px;text-align:center;cursor:pointer;background:rgba(201,162,74,.05);color:#e8d9b0;font-size:15px;line-height:1.6}
+.bulk:hover,.bulk.drag{background:rgba(201,162,74,.12);border-color:#f0cf7a}
+.bulk b{color:#f3e4bd;font-family:Cardo,serif;font-size:22px;letter-spacing:1px}
+.bulk small{color:#8c97ae;font-size:12px}
+.blog{margin-top:8px;font-size:13px;color:#aeb6c6;display:flex;flex-wrap:wrap;gap:6px}
+.blog span{padding:3px 9px;border-radius:999px;background:#1b2333}.blog span.ok{color:#7be07a}.blog span.no{color:#ff9a9a}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
 </head>
@@ -69,9 +75,9 @@ input[type=file]{display:none}
   <h1>Raid Build Card</h1>
   <div class="sub">Step 1 · Gear — upload one in-game screenshot per slot</div>
   <div class="howto">
-    Open the champion in the game, tap an equipped item so its details window appears top-left, and take a screenshot of the <b>whole screen</b>.<br>
-    Drop it on the matching slot, click the slot to browse — or click a slot and press <b>Ctrl+V</b> to paste.
-    Everything is read in your browser; your screenshots are not uploaded anywhere. Check the fields afterwards — anything <b style="color:#f0cf7a">highlighted</b> needs a look.
+    In the game, open the champion and tap each equipped item so its details window appears top-left, then screenshot the <b>whole screen</b> — one screenshot per item.<br>
+    Drop <b>all of them at once</b> in the gold box below and each goes to its slot by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
+    Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
   </div>
   <div class="hero">
     <div><div class="lbl">Champion</div><input class="hn" id="hName" placeholder="from screenshot…"></div>
@@ -79,6 +85,8 @@ input[type=file]{display:none}
     <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
     <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
   </div>
+  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all 9 item screenshots in the file window with Ctrl+A</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
   <div class="grid" id="grid"></div>
 </div>
@@ -157,9 +165,50 @@ function resetAll(){
 document.getElementById('btnReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='flex';});
 document.getElementById('noReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';});
 document.getElementById('yesReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';resetAll();});
+/* which of the 9 equipped items is enlarged/highlighted in the right-hand panel */
+const CELLS=(()=>{const xs=[[1466,1584],[1610,1728],[1754,1872]],x3=[[1460,1578],[1603,1721],[1747,1865]],ys=[[218,337],[362,481],[538,657]],out=[];
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const [x0,x1]=(r===2?x3:xs)[c],[y0,y1]=ys[r];out.push([x0,y0,x1,y1]);}return out;})();
+function highlightSlot(img){
+  const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+  const g=c.getContext('2d'); g.drawImage(img,0,0); const W=c.width;
+  const d=g.getImageData(0,0,c.width,c.height).data;
+  const hot=(x,y)=>{x=Math.round(x*s);y=Math.round(y*s);const k=(y*W+x)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>178&&(mx-mn)/mx>0.5;};
+  const sc=CELLS.map(([x0,y0,x1,y1])=>{let n=0,t=0;for(let q=5;q<13;q++){
+      for(let x=x0-q;x<x1+q;x+=2){t+=2;n+=hot(x,y0-q)+hot(x,y1+q);}
+      for(let y=y0-q;y<y1+q;y+=2){t+=2;n+=hot(x0-q,y)+hot(x1+q,y);} } return n/t;});
+  const order=sc.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  const sure=order[0][0]>0.15 && order[0][0]-order[1][0]>0.08;
+  return sure?SLOTS[order[0][1]]:null;
+}
+function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
+async function handleBulk(files){
+  const log=document.getElementById('blog'); log.innerHTML='';
+  const used={};
+  for(const f of files){
+    let img; try{img=await loadImg(f);}catch(e){continue;}
+    const slot=highlightSlot(img);
+    const tag=document.createElement('span');
+    if(!slot){tag.className='no';tag.textContent=`✗ ${f.name}: not an item screenshot`;}
+    else if(used[slot]){tag.className='no';tag.textContent=`✗ ${f.name}: second ${slot} — skipped`;}
+    else{ used[slot]=1; const el=document.querySelector(`.slot[data-slot="${slot}"]`);
+      if(el.classList.contains('filled'))clearSlot(el);
+      queue.push({el,img}); badge(el,'busy','queued'); tag.className='ok'; tag.textContent=`✓ ${slot}`; }
+    log.appendChild(tag);
+  }
+  pump();
+}
+(()=>{const z=document.getElementById('bulk'),fi=document.getElementById('bulkFile');
+  z.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{if(fi.files.length)handleBulk([...fi.files]);fi.value='';});
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag'));
+  z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
+})();
 function setActive(el){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));el.classList.add('active');active=el;}
 document.addEventListener('paste',e=>{
-  if(!active)return; const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
+  const items=[...(e.clipboardData||{}).items||[]].filter(i=>i.type.startsWith('image/'));
+  if(!active){ if(items.length){e.preventDefault();handleBulk(items.map(i=>i.getAsFile()));} return; }
+  const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
   if(it){e.preventDefault();handle(active,it.getAsFile());}
 });
 const setStatus=t=>document.getElementById('status').textContent=t;
@@ -193,7 +242,7 @@ async function pump(){
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
-    const bad=checkSlot(el,item,data.text);
+    const bad=checkSlot(el,item,data.text,highlightSlot(img));
     if(bad){ showErr(el,bad,img); }
     else { applyHero(el,ht,stars); fill(el,item,data.text); }
   }catch(err){badge(el,'warn','error');console.error(err);}
@@ -290,8 +339,9 @@ function parse(text){
 }
 const ARMOR={Weapon:'Weapon',Helmet:'Helmet',Shield:'Shield',Gauntlets:'Gloves',Chestplate:'Chest',Boots:'Boots'};
 const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banner:['HP','ATK','DEF','ACC','RES']};
-function checkSlot(el,item,text){
+function checkSlot(el,item,text,hl){
   const want=el.dataset.slot;
+  if(hl) return hl===want?null:{msg:`This is the <b>${hl}</b> screenshot, not ${want}.`,move:hl};
   if(!item.set && !item.main) return {msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`};
   const found=Object.keys(ARMOR).find(k=>new RegExp('\\b'+k+'\\b','i').test(text));
   const isAcc=!!ACC_MAIN[want];
