@@ -301,7 +301,13 @@ function checkSlot(el,item,text){
     return null;
   }
   // no armour slot name in the window → it is an accessory (the game shows the faction there instead)
-  if(!isAcc) return {msg:`This looks like an accessory (Ring, Amulet or Banner), not ${want}.`};
+  if(!isAcc){
+    const ms=item.main&&item.main.s;
+    const fit=Object.keys(ACC_MAIN).filter(k=>!ms||ACC_MAIN[k].includes(ms));
+    return fit.length===1
+      ? {msg:`This is an accessory — with <b>${ms}</b> as main stat it must be the <b>${fit[0]}</b>, not ${want}.`,move:fit[0]}
+      : {msg:`This is an accessory, not ${want}. The game doesn't show which one — pick where it goes:`,moves:fit};
+  }
   const ms=item.main&&item.main.s;
   if(ms && !ACC_MAIN[want].includes(ms)){
     const fit=Object.keys(ACC_MAIN).filter(k=>ACC_MAIN[k].includes(ms));
@@ -311,12 +317,13 @@ function checkSlot(el,item,text){
 }
 function showErr(el,e,img){
   const box=el.querySelector('.err');
-  box.innerHTML='⚠ '+e.msg+(e.move?`<br><button class="mv">Move it to ${e.move}</button>`:'');
+  const targets=e.moves||(e.move?[e.move]:[]);
+  box.innerHTML='⚠ '+e.msg+(targets.length?'<br>'+targets.map(t=>`<button class="mv" data-to="${t}" style="margin-right:6px">${targets.length>1?t:'Move it to '+t}</button>`).join(''):'');
   box.style.display='block'; badge(el,'bad','wrong screenshot'); el.classList.add('filled');
   el.querySelector('.drop').style.display='none';
-  if(e.move){ box.querySelector('.mv').addEventListener('click',ev=>{ev.stopPropagation();
-    const target=document.querySelector(`.slot[data-slot="${e.move}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
-    queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }); }
+  box.querySelectorAll('.mv').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();
+    const target=document.querySelector(`.slot[data-slot="${b.dataset.to}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
+    queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }));
 }
 function applyHero(el,txt,stars){
   el._hero=null;
