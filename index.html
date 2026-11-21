@@ -75,7 +75,7 @@ input[type=file]{display:none}
 .modal .bar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;margin-bottom:16px;z-index:2}
 .modal .stage{margin:0 auto;transform-origin:top left}
 /* ---------- the card ---------- */
-.card{width:1400px;padding:30px;font-family:Inter,sans-serif;color:#d9dee8;
+.card{width:1840px;padding:34px;font-family:Inter,sans-serif;color:#d9dee8;
  background:radial-gradient(1100px 450px at 15% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 450px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
 .card .ch{display:flex;align-items:center;gap:20px;padding:22px 28px;border:1px solid #3b3150;border-radius:16px;background:linear-gradient(90deg,rgba(120,70,180,.18),rgba(20,30,45,.4))}
 .card .cn{font-family:Cardo,serif;font-size:54px;letter-spacing:2px;color:#f3e4bd;line-height:1;text-transform:uppercase}
@@ -98,6 +98,20 @@ input[type=file]{display:none}
 .card .subs{margin-top:10px;border-top:1px solid #232c3d;padding-top:8px}
 .card .sr{display:grid;grid-template-columns:1fr 64px 56px;font-size:16px;line-height:1.6}
 .card .sr b{text-align:right;color:#e8ecf3;font-weight:600}.card .sr i{text-align:right;color:#5fd16a;font-style:normal;font-weight:600}
+.card .row2{display:grid;grid-template-columns:1fr 470px;gap:22px}
+.card .row2>.panel{margin-top:22px}
+.card .empty{border:1.5px dashed #2e3850;border-radius:12px;color:#5d6880;font-size:15px;text-align:center;padding:26px 16px;line-height:1.6}
+.card .empty b{display:block;color:#7f8aa3;font-family:Cardo,serif;font-size:19px;letter-spacing:1px}
+.card table{width:100%;border-collapse:collapse;font-size:15px}
+.card th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7f8aa3;font-weight:600;padding:7px 5px;text-align:right;border-bottom:1px solid #2a3448;line-height:1.25;vertical-align:bottom}
+.card td{padding:9px 5px;text-align:right;border-bottom:1px solid #1c2433;color:#3a4660}
+.card td.rk{text-align:left;color:#c3cad8;font-weight:600}
+.card th.ar,.card td.ar{background:rgba(127,211,200,.06)}.card th.ar{color:#7fd3c8}
+.card th.tot{color:#f3e4bd}.card td.tot{background:rgba(201,162,74,.06)}
+.card .sab{font-family:Inter;font-size:13px;color:#9aa5bb;border:1px solid #2e3850;border-radius:8px;padding:5px 10px}
+.card .bl{display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid #232c3d}
+.card .bl .ph{width:60px;height:60px;border-radius:8px;border:1.5px dashed #3a4660}
+.card .bl .n{font-size:19px;font-weight:700;color:#7f8aa3}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
@@ -260,10 +274,23 @@ function buildCard(){
       <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
       ${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
   const stars='★'.repeat(hero.stars||0);
+  const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
+  const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
+  const cls=j=>j===9?'ar':(j===10?'tot':'');
+  const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map(r=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>`<td class="${cls(j)}">·</td>`).join('')}</tr>`).join('')}</table>`;
+  const bstars=hero.stars?`<span style="color:#ff3b3b;letter-spacing:1px">${'★'.repeat(hero.stars)}</span>`:'';
   return `<div class="card" id="card"><div class="ch"><div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>
-    <div class="panel"><div class="pt">Gear<small>all values as in game · <span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
+    <div class="row2">
+      <div class="panel"><div class="pt">Gear<small><span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
+      <div class="panel"><div class="pt">Relic</div><div class="empty"><b>Relic</b>not added yet</div>
+        <div class="bl"><div class="ph"></div><div><div class="n">Blessing ${bstars}</div><div style="font-size:13px;color:#5d6880">not added yet</div></div></div></div>
+    </div>
+    <div class="row2">
+      <div class="panel"><div class="pt">Total Stats<span class="sab">Area Bonuses: not added yet</span></div>${table}</div>
+      <div class="panel"><div class="pt">Masteries</div><div class="empty" style="padding:120px 16px"><b>Masteries</b>not added yet</div></div>
+    </div>
     <div class="foot"><span>Raid: Shadow Legends</span><span>${esc(name)} · build card</span></div></div>`;
 }
 function fitStage(){const st=document.getElementById('stage'),c=document.getElementById('card');if(!c)return;
