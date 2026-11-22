@@ -350,7 +350,9 @@ const ABASE={L:0,C:960,R:1920};
 // Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
 function vAnchorOf(kind,x,y){
   if(kind!=='relic'&&kind!=='skills'||y<80)return 'T';
-  if(x<480)return y>=940?'B':'T'; if(x<1420)return y>=400?'B':'T'; return y>=740?'B':'T';
+  if(x<480)return y>=940?'B':'T'; if(x<1420)return y>=400?'B':'T';
+  if(kind==='skills'&&y>=300&&y<740)return 'M';     // the skills grid sits in the middle: it moves by half the extra space
+  return y>=740?'B':'T';
 }
 async function ocrWords(img){
   const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
@@ -382,7 +384,7 @@ function fitKind(kind,words,imgW){
         const d=m.o.y-(y0+sc*m.r[1]); if(d>-tol&&d<120*sc)v.push(d); });
       if(v.length){v.sort((a,b)=>a-b); const md=v[v.length>>1]; if(md>tol*0.5)y0B=y0+md;} }
     let n=0,res=0; const used=new Set();
-    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=(m.va==='B'?y0B:y0)+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
+    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=(m.va==='B'?y0B:m.va==='M'?(y0+y0B)/2:y0)+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
       if(d<tol){n++;res+=d;used.add(m.o);} });
     return {n,res,s:sc,y0,y0B,off};
   };
@@ -398,13 +400,14 @@ function fitKind(kind,words,imgW){
 function drawNormalized(img,kind,F){
   const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
   g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
-  const strip=(xa,xb,ya,yb,A,V)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),(V==='B'&&F.y0B!==undefined?F.y0B:F.y0)+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
+  const strip=(xa,xb,ya,yb,A,V)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),(F.y0B===undefined||!V?F.y0:V==='B'?F.y0B:(F.y0+F.y0B)/2)+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
   if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
   else if(kind==='item'){ strip(0,520,0,1080,'L'); strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); }
   else { strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
     strip(0,480,80,940,'L'); strip(0,480,940,1080,'L','B'); strip(480,720,80,400,'L'); strip(480,720,400,1080,'L','B');
     strip(720,1150,80,400,'C'); strip(720,1150,400,1080,'C','B'); strip(1150,1420,80,400,'R'); strip(1150,1420,400,1080,'R','B');
-    strip(1420,1920,80,740,'R'); strip(1420,1920,740,1080,'R','B'); }
+    if(kind==='skills'){ strip(1420,1920,80,300,'R'); strip(1420,1920,300,740,'R','M'); } else strip(1420,1920,80,740,'R');
+    strip(1420,1920,740,1080,'R','B'); }
   return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
 }
 async function autoNormalize(img){
