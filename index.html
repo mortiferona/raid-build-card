@@ -378,10 +378,12 @@ async function relicAnchor(img){
   const ws=await panelWords(img);
   const STAT=['ATK','ACC','HP','DEF','SPD','RES','DMG','RATE'];
   const isStat=t=>{t=t.replace(/[^A-Za-z]/g,'').toUpperCase(); return t.length>=2&&t.length<=4&&STAT.some(n=>n===t||(t.length>=3&&lev(n,t)<=1));};
-  const lab=ws.filter(w=>isStat(w.t)); let best=null;
-  for(const a of lab){ const row=lab.filter(b=>Math.abs(b.y-a.y)<a.h*0.6).sort((p,q)=>p.x-q.x);
-    // "C. DMG" / "C. RATE" are two words: keep the stat word, the box centre is near it
-    const xs=[]; row.forEach(b=>{ if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); });
+  const lab=ws.filter(w=>isStat(w.t)||/^C[.,]?$/i.test(w.t)); let best=null;
+  for(const a of lab){ if(!isStat(a.t))continue; const row=lab.filter(b=>Math.abs(b.y-a.y)<a.h*0.6).sort((p,q)=>p.x-q.x);
+    // "C. DMG" / "C. RATE" come as two words: one box, centred between them
+    const xs=[]; for(let i=0;i<row.length;i++){ const b=row[i], nx=row[i+1];
+      if(/^C[.,]?$/i.test(b.t)){ if(nx&&nx.x0-b.x1<a.h*2){ xs.push((b.x0+nx.x1)/2); i++; } continue; }
+      if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); }
     if(xs.length<2)continue; const sh=a.h/18;                                  // bonus names are about 18 units tall
     let sc=null; for(let i=1;i<xs.length;i++){ const gap=xs[i]-xs[i-1], n=Math.max(1,Math.round(gap/(122*sh))); if(n<=2){ const v=gap/(122*n); if(!sc)sc=v; else sc=(sc+v)/2; } }
     if(!sc||sc<0.25||sc>2)continue;
@@ -391,7 +393,9 @@ async function relicAnchor(img){
   }
   if(!best)return null; const sc=best.s;
   let b1; if(best.xs.length>=3)b1=best.xs[0];
-  else { const left=ws.filter(w=>w.y>best.y+40*sc&&w.y<best.y+140*sc).reduce((m,w)=>Math.min(m,w.x0),1e9);   // description starts at the panel's left edge
+  else { // the description lines start at the panel's left edge: take the edge most lines share, inside the panel only
+    const st=ws.filter(w=>w.y>best.y+40*sc&&w.y<best.y+140*sc&&w.x0>best.xs[0]-130*sc&&w.x0<best.xs[0]+40*sc).map(w=>w.x0).sort((p,q)=>p-q);
+    let left=1e9,bn=0; st.forEach(x=>{const n=st.filter(y=>Math.abs(y-x)<4*sc).length; if(n>bn||(n===bn&&x<left)){bn=n;left=x;}}); if(bn<2)left=1e9;
     b1=left<1e9?left+(RBOX[0]-RLEFT)*sc:best.xs[0]; if(Math.abs(best.xs[0]-b1)>40*sc)b1=best.xs[0]-Math.round((best.xs[0]-b1)/(122*sc))*122*sc; }
   const ra={s:sc,ax:b1-RBOX[0]*sc,ay:best.y-RROW*sc}; RANCH[img.naturalWidth+'x'+img.naturalHeight]=ra; return ra;
 }
@@ -490,7 +494,9 @@ async function autoNormalize(img){
   }
   // relic tab: place the panel by its row of bonus names (works when the word fit is off or missing)
   if(bk==='relic'||bk==='skills'||!best||best.n<3){
-    for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ const ra=await find(img);
+    for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ let ra=await find(img);
+      // two independent scales must agree: the landmarks' and the whole screen's (when the screen was found)
+      if(ra&&best&&best.n>=3&&Math.abs(ra.s-best.s)>best.s*0.05){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
       if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
         return {img:out,kind,fit:F}; } } }
   if(!best||best.n<3)return {img,kind:null};
