@@ -236,9 +236,9 @@ const FMTS=[['png','PNG'],['jpg','JPG 75%'],['webp','WebP 70% (Discord)']];
 const $=id=>document.getElementById(id);
 const box=(host,items,on)=>{ $(host).innerHTML=items.map(([v,t])=>`<label class="chip${on.includes(v)?' on':''}"><input type="checkbox" value="${v}" ${on.includes(v)?'checked':''}>${t}</label>`).join('');
   $(host).querySelectorAll('input').forEach(i=>i.onchange=()=>i.parentNode.classList.toggle('on',i.checked)); };
-box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r.replace('x','×')+(r==='1536x864'?' · 125%':'')]),RES_ON);
+box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r.replace('x','×')]),[]);
 document.querySelectorAll('#sim [data-all],#sim [data-none]').forEach(a=>a.onclick=()=>{ const on=!!a.dataset.all; document.querySelectorAll('#'+(a.dataset.all||a.dataset.none)+' input').forEach(i=>{i.checked=on;i.parentNode.classList.toggle('on',on);}); });
-box('simMode',MODES,['full','win']); box('simFmt',FMTS,['png']);
+box('simMode',MODES,[]); box('simFmt',FMTS,[]);
 const picked=h=>[...$(h).querySelectorAll('input:checked')].map(i=>i.value);
 
 let files=[], dir=null, stop=false, baseline={};
@@ -295,7 +295,10 @@ const stamp=()=>new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
 $('simRun').onclick=async()=>{
   if(!files.length){alert('Pick a set of screenshots first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
   wrapNormalize(); stop=false; const set=($('simSet').value||'set').replace(/[^\w-]/g,'_'), batch=stamp();
-  let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt'); if(!res.length||!modes.length||!fmts.length){alert('Tick at least one screen, one mode and one file type');return;}
+  let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt');
+  if(!res.length){alert('Tick at least one screen size');return;}
+  if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
+  if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
   const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
   $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
   const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
