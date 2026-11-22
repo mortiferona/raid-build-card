@@ -173,7 +173,7 @@ input[type=file]{display:none}
       <div class="grp"><div class="gl">Screen size <a data-all="simRes">all</a> · <a data-none="simRes">none</a></div><div id="simRes" class="chips"></div></div>
       <div class="grp"><div class="gl">Taken as</div><div id="simMode" class="chips"></div></div>
       <div class="grp"><div class="gl">File type</div><div id="simFmt" class="chips"></div></div>
-      <div class="note">Nothing ticked = all screen sizes, full screen, PNG. Tick to narrow it down. Only 16:9 screens can be simulated. Other shapes (16:10, 4:3, ultrawide) make the game rearrange its layout — those need real screenshots.</div>
+      <div class="note">Nothing ticked = all screen sizes and shapes (16:9, 16:10, 4:3, 5:4, 21:9, 32:9), both stretched and with black bars, PNG. Tick to narrow it down.</div>
     </section>
 
     <section class="sc">
@@ -240,14 +240,16 @@ input[type=file]{display:none}
 const SIM_VERSION='test-1';
 const UA=navigator.userAgent, BROWSER=/Edg\//.test(UA)?'Edge':/OPR\//.test(UA)?'Opera':/Firefox\//.test(UA)?'Firefox':/Chrome\//.test(UA)?'Chrome':'Other';
 const BVER=(UA.match(/(?:Edg|OPR|Firefox|Chrome)\/([\d.]+)/)||['',''])[1];
-const RES=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3200x1800','3840x2160'];
+const RES=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3200x1800','3840x2160',
+  '1680x1050','1920x1200','2560x1600','1024x768','1600x1200','1280x1024','2560x1080','3440x1440','3840x1080'];
+const RATIO=r=>{ if(r==='orig')return ''; const [w,h]=r.split('x').map(Number),a=w/h; return Math.abs(a-16/9)<.01?'16:9':Math.abs(a-1.6)<.01?'16:10':Math.abs(a-4/3)<.01?'4:3':Math.abs(a-1.25)<.01?'5:4':a>3?'32:9':'21:9'; };
 const RES_ON=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3840x2160'];
-const MODES=[['full','Full screen'],['win','Window + taskbar'],['small','Smaller window on desktop']];
+const MODES=[['full','Full screen (stretched)'],['bars','Full screen, black bars'],['win','Window + taskbar'],['small','Smaller window on desktop']];
 const FMTS=[['png','PNG'],['jpg','JPG 75%'],['webp','WebP 70% (Discord)']];
 const $=id=>document.getElementById(id);
 const box=(host,items,on)=>{ $(host).innerHTML=items.map(([v,t])=>`<label class="chip${on.includes(v)?' on':''}"><input type="checkbox" value="${v}" ${on.includes(v)?'checked':''}>${t}</label>`).join('');
   $(host).querySelectorAll('input').forEach(i=>i.onchange=()=>i.parentNode.classList.toggle('on',i.checked)); };
-box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r.replace('x','×')]),[]);
+box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r.replace('x','×')+' <small>'+RATIO(r)+'</small>']),[]);
 document.querySelectorAll('#sim [data-all],#sim [data-none]').forEach(a=>a.onclick=()=>{ const on=!!a.dataset.all; document.querySelectorAll('#'+(a.dataset.all||a.dataset.none)+' input').forEach(i=>{i.checked=on;i.parentNode.classList.toggle('on',on);}); });
 box('simMode',MODES,[]); box('simFmt',FMTS,[]);
 const picked=h=>[...$(h).querySelectorAll('input:checked')].map(i=>i.value);
@@ -265,6 +267,8 @@ const load=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.
 function render(img,SW,SH,mode){
   const c=document.createElement('canvas'),g=c.getContext('2d'); g.imageSmoothingQuality='high'; c.width=SW; c.height=SH;
   if(mode==='full'){ g.drawImage(img,0,0,SW,SH); return c; }
+  if(mode==='bars'){ g.fillStyle='#000'; g.fillRect(0,0,SW,SH); const k=Math.min(SW/img.width,SH/img.height),w=Math.round(img.width*k),h=Math.round(img.height*k);
+    g.drawImage(img,Math.round((SW-w)/2),Math.round((SH-h)/2),w,h); return c; }
   const dpi=SH/1080, bg=g.createLinearGradient(0,0,SW,SH); bg.addColorStop(0,'#1d3557'); bg.addColorStop(1,'#457b9d'); g.fillStyle=bg; g.fillRect(0,0,SW,SH);
   const tb=Math.round(31*dpi), task=Math.round(48*dpi); let gh,gw,x,y;
   if(mode==='win'){ gh=SH-tb-task; gw=Math.round(gh*16/9); x=Math.round((SW-gw)/2); y=tb; }
@@ -320,10 +324,10 @@ $('simRun').onclick=async()=>{
   if(!files.length){alert('Load your screenshots in the gold box of the reader first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
   stop=false; let set='set'; const batch=stamp(); $('simGal').innerHTML='';
   let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt');
-  if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
+  if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full','bars']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
   if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
-  const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
+  const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>{ if(m==='bars'&&RATIO(r)==='16:9')return; fmts.forEach(f=>combos.push([r,m,f])); }));   // black bars on a 16:9 screen = same as full
   $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
   const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
   for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
@@ -339,7 +343,7 @@ $('simRun').onclick=async()=>{
     const fname=`${set}_${BROWSER}_${batch}_${String(i+1).padStart(2,'0')}_${r}_${m}_${f}.json`; const where=await writeLog(fname,JSON.stringify(rec,null,1));
     if(cardPng){ await writeBlob(fname.replace(/\.json$/,'_card.png'),cardPng.blob);
       const cls2=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
-      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
+      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' ('+RATIO(r)+') · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
     const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
     $('simTab').insertAdjacentHTML('beforeend',`<tr><td>${r}</td><td>${m}</td><td>${f}</td><td class="${fails.length?'bad':'ok'}">${rec.recognised}${fails.length?'<br>'+fails.map(x=>x.replace(/</g,'&lt;')).join('<br>'):''}</td><td class="${flagged.length?'warn':'ok'}">${flagged.join(', ')||'none'}</td><td class="${cls}">${r==='orig'?'(reference)':(diffs.length?diffs.slice(0,8).join('<br>')+(diffs.length>8?`<br>… ${diffs.length-8} more in the log`:''):'none')}</td><td>${(ms/1000).toFixed(0)} s</td></tr>`);
@@ -524,6 +528,9 @@ async function handleBulk(files){
     const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
     queue.push({unknown:true,img,tag,name:f.name,batch});
   }
+  const ks=[]; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(r&&r.k)ks.push(r.k); }
+  ks.sort((a,b)=>a-b); const K=ks.length?ks[ks.length>>1]:1; batch.stretch=K;
+  if(Math.abs(K-1)>0.015) for(const j of queue){ if(j.batch===batch){ j.img=await unstretch(j.img,K); } }
   // all item screenshots of one person share the same item window: take the common frame of the batch (median per screen size)
   const groups={}; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(!r)continue; const k=r.W+'x'+r.H; (groups[k]=groups[k]||[]).push(r); }
   for(const k in groups){ const g=groups[k]; if(g.length<2)continue; const med=f=>{const v=g.map(r=>r[f]).sort((a,b)=>a-b);return v[v.length>>1];};
@@ -606,7 +613,18 @@ function popupRect(img){
   if(rows.length<2)return null;
   const top=rows[0]; let bot=-1; for(const y of rows){const h=y-top; if(h>=H*0.3&&h<=H*0.78)bot=y;}
   if(bot<0)return null;
-  const sc=(bot-top)/POP_H; return {s:sc,T:top,L:xL-POP_X*sc,W,H};
+  const sc=(bot-top)/POP_H;
+  let xR=-1; for(let x=Math.min(w-1,xL+Math.round((bot-top)*2.6));x>xL+(bot-top)*0.4&&xR<0;x--){let n=0;for(let y=top;y<bot;y++)if(cy(x,y))n++; if(n>=(bot-top)*0.6)xR=x;}
+  // the frame is 498 x 535 px on an undistorted screen: a different width/height means the picture is stretched sideways
+  const k=xR>0?((xR-xL)/(bot-top))/(498/535):null;
+  return {s:sc,T:top,L:xL-POP_X*sc,W,H,k};
+}
+// a screen of another shape (16:10, 4:3, 21:9 ...) with the game filling it stretches the picture sideways:
+// measure the stretch on the item frames of the batch and squeeze every screenshot back to the normal shape
+async function unstretch(img,k){
+  const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth/k); c.height=img.naturalHeight;
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/png')); return loadImg(b);
 }
 // windows narrower than 16:9: the champion screen keeps its top part glued to the top and its bottom part (Tavern,
 // Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
@@ -692,7 +710,13 @@ async function autoNormalize(img){
   if(bk==='relic'||bk==='skills'||!best||best.n<3){
     for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ let ra=await find(img);
       // two independent scales must agree: the landmarks' and the whole screen's (when the screen was found)
-      if(ra&&best&&best.n>=3&&Math.abs(ra.s-best.s)>best.s*0.05){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
+      // ... and so must the two positions (the panel sits at the right edge, near the top). When they disagree, the screen
+      // itself is the third judge: a game filling the picture has scale = height/1080 and its right edge at the picture's edge
+      const W_=img.naturalWidth,G={s:img.naturalHeight/1080}; G.ax=W_-1920*G.s;
+      const dist=(s_,ay,ax)=>Math.abs(s_-G.s)/G.s*100+Math.abs(ay)/G.s/8+Math.abs(ax-G.ax)/G.s/8;
+      const fitAx=best&&best.off&&best.off.R!==undefined?best.off.R-1920*best.s:null;
+      const disagree=ra&&best&&best.n>=3&&(Math.abs(ra.s-best.s)>best.s*0.05||Math.abs(ra.ay-best.y0)>8*best.s||(fitAx!==null&&Math.abs(ra.ax-fitAx)>8*best.s));
+      if(disagree&&dist(ra.s,ra.ay,ra.ax)>dist(best.s,best.y0,fitAx===null?G.ax:fitAx)){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
       if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
         return {img:out,kind,fit:F}; } } }
   if(!best||best.n<3)return {img,kind:null};
