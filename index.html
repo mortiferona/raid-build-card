@@ -1023,7 +1023,7 @@ async function rowCheck(img,it){
   try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
     const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
     if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
-    const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'bw'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+    const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
     const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
     if(row===cur)continue;
     if(dig!==null&&dig===row){ sub.v=row; sub.g=sub.ng||sub.g; sub.sure=true; continue; }   // outvoted 2:1
