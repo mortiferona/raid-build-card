@@ -353,6 +353,48 @@ const ABASE={L:0,C:960,R:1920};
 /* item window: always top-left in the game, its height is always 534 units (its width follows the text).
    Found by its light-blue frame, so it needs no template of the whole screen. */
 const POP_H=534.5, POP_X=9.5, POPS={};
+/* relic tab: the row of bonus names (ATK / ACC / HP ...) is always there, three boxes 122 units apart.
+   It gives the scale and the place of every other field of the relic panel, at any screen size or shape. */
+const RBOX=[1515,1637,1760], RROW=546, RLEFT=1459;
+async function panelWords(img){                                  // words of the right part of the screen, read once per screenshot
+  if(img._pw)return img._pw;
+  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:1.5;
+  const c=document.createElement('canvas');c.width=Math.round((W-x0)*k);c.height=Math.round(H*k);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,x0,0,W-x0,H,0,0,c.width,c.height);
+  await worker.setParameters({tessedit_pageseg_mode:'11'}); const {data}=await worker.recognize(c); await worker.setParameters({tessedit_pageseg_mode:'6'});
+  return img._pw=(data.words||[]).map(w=>({t:w.text,x0:x0+w.bbox.x0/k,x1:x0+w.bbox.x1/k,y0:w.bbox.y0/k,y1:w.bbox.y1/k})).map(w=>({...w,x:(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,h:w.y1-w.y0}));
+}
+const RANCH={};      // relic panel found in a screenshot of this size: the Skills tab has exactly the same panel
+/* Skills tab: "SKILLS" (top of the panel, centred) gives the panel's x; "BLESSING" gives the y of the blessing part.
+   Both words appear nowhere else in the game. The scale comes from the relic tab of the same batch, or from the letters. */
+const RSKILLS_X=1669, RBLESS_Y=764, RHEAD_H=21;
+async function blessAnchor(img){
+  const ws=await panelWords(img), key=img.naturalWidth+'x'+img.naturalHeight;
+  const b=ws.find(w=>/bless/i.test(w.t)), k=ws.find(w=>/^\W*skil/i.test(w.t)); if(!b||!k)return null;
+  const R=RANCH[key], sc=R?R.s:((b.h+k.h)/2)/RHEAD_H;
+  return {s:sc,ax:k.x-RSKILLS_X*sc,ay:b.y-RBLESS_Y*sc};
+}
+async function relicAnchor(img){
+  const ws=await panelWords(img);
+  const STAT=['ATK','ACC','HP','DEF','SPD','RES','DMG','RATE'];
+  const isStat=t=>{t=t.replace(/[^A-Za-z]/g,'').toUpperCase(); return t.length>=2&&t.length<=4&&STAT.some(n=>n===t||(t.length>=3&&lev(n,t)<=1));};
+  const lab=ws.filter(w=>isStat(w.t)); let best=null;
+  for(const a of lab){ const row=lab.filter(b=>Math.abs(b.y-a.y)<a.h*0.6).sort((p,q)=>p.x-q.x);
+    // "C. DMG" / "C. RATE" are two words: keep the stat word, the box centre is near it
+    const xs=[]; row.forEach(b=>{ if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); });
+    if(xs.length<2)continue; const sh=a.h/18;                                  // bonus names are about 18 units tall
+    let sc=null; for(let i=1;i<xs.length;i++){ const gap=xs[i]-xs[i-1], n=Math.max(1,Math.round(gap/(122*sh))); if(n<=2){ const v=gap/(122*n); if(!sc)sc=v; else sc=(sc+v)/2; } }
+    if(!sc||sc<0.25||sc>2)continue;
+    // a value (+number or locked "Lvl") must sit under the names
+    const vals=ws.filter(v=>v.y>a.y+8*sc&&v.y<a.y+50*sc&&/^\+?\d|lvl|lv/i.test(v.t)).length; if(!vals)continue;
+    const score=xs.length*2+vals; if(!best||score>best.score)best={score,xs,y:a.y,s:sc,words:ws};
+  }
+  if(!best)return null; const sc=best.s;
+  let b1; if(best.xs.length>=3)b1=best.xs[0];
+  else { const left=ws.filter(w=>w.y>best.y+40*sc&&w.y<best.y+140*sc).reduce((m,w)=>Math.min(m,w.x0),1e9);   // description starts at the panel's left edge
+    b1=left<1e9?left+(RBOX[0]-RLEFT)*sc:best.xs[0]; if(Math.abs(best.xs[0]-b1)>40*sc)b1=best.xs[0]-Math.round((best.xs[0]-b1)/(122*sc))*122*sc; }
+  const ra={s:sc,ax:b1-RBOX[0]*sc,ay:best.y-RROW*sc}; RANCH[img.naturalWidth+'x'+img.naturalHeight]=ra; return ra;
+}
 function popupRect(img){
   const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;
   const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,Math.round(W*0.45),H).data,w=Math.round(W*0.45);
@@ -424,11 +466,13 @@ function drawNormalized(img,kind,F){
   if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
   else if(kind==='item'){ if(F.pop) g.drawImage(img,F.pop.L,F.pop.T,520*F.pop.s,1080*F.pop.s,0,0,520,1080); else strip(0,520,0,1080,'L');
     if(F.off){ strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); } }
-  else { strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
+  else if(F.off){ strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
     strip(0,480,80,940,'L'); strip(0,480,940,1080,'L','B'); strip(480,720,80,400,'L'); strip(480,720,400,1080,'L','B');
     strip(720,1150,80,400,'C'); strip(720,1150,400,1080,'C','B'); strip(1150,1420,80,400,'R'); strip(1150,1420,400,1080,'R','B');
-    if(kind==='skills'){ strip(1420,1920,80,300,'R'); strip(1420,1920,300,740,'R','M'); } else strip(1420,1920,80,740,'R');
-    strip(1420,1920,740,1080,'R','B'); }
+    if(F.rmap){ const R=F.rmap; g.drawImage(img,R.ax+R.s*1420,R.ay+R.s*80,500*R.s,1000*R.s,1420,80,500,1000); }
+    else { if(kind==='skills'){ strip(1420,1920,80,300,'R'); strip(1420,1920,300,740,'R','M'); } else strip(1420,1920,80,740,'R');
+      strip(1420,1920,740,1080,'R','B'); } }
+  else if(F.rmap){ const R=F.rmap; g.drawImage(img,R.ax+R.s*1420,R.ay+R.s*80,500*R.s,1000*R.s,1420,80,500,1000); }   // only the relic panel is known
   return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
 }
 async function autoNormalize(img){
@@ -438,12 +482,17 @@ async function autoNormalize(img){
   // item window: placed by its own frame; within one batch the same screen size gives the same frame (backup when one isn't found)
   let pop=popupRect(img); const key=img.naturalWidth+'x'+img.naturalHeight, med=POPS[key];
   if(pop&&med&&med.batch&&(Math.abs(pop.s-med.s)>med.s*0.02||Math.abs(pop.T-med.T)>3||Math.abs(pop.L-med.L)>3)) pop=med;   // this one disagrees with the rest
-  if(pop){ if(!med||!med.batch)POPS[key]=pop; } else if((!best||best.n<3||bk==='item')&&POPS[key]&&bk!=='totals'&&bk!=='masteries') pop=POPS[key];
+  if(pop){ if(!med||!med.batch)POPS[key]=pop; } else if(bk==='item'&&best.n>=3&&POPS[key]) pop=POPS[key];   // the batch frame only for a known item screenshot
   if(pop&&(!best||best.n<3||bk==='item')){
     const F=best&&bk==='item'?{...best,pop}:{s:pop.s,y0:pop.T,pop};
     const out=await drawNormalized(img,'item',F); out._src=img; out._pop=pop;
     return {img:out,kind:'item',fit:F};
   }
+  // relic tab: place the panel by its row of bonus names (works when the word fit is off or missing)
+  if(bk==='relic'||bk==='skills'||!best||best.n<3){
+    for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ const ra=await find(img);
+      if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
+        return {img:out,kind,fit:F}; } } }
   if(!best||best.n<3)return {img,kind:null};
   const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
   if(plain)return {img,kind:bk};
@@ -499,6 +548,7 @@ const TROWY=[396,461,526,591,656,721,786,851,916];
 const totals={rows:null,area:''};
 // read from the original screenshot where we know exactly where the item window is (one resize instead of two)
 function src(img,x,y,w,h){ const P=img._pop; if(P&&img._src&&x+w<=520) return [img._src,P.L+P.s*x,P.T+P.s*y,P.s*w,P.s*h];
+  const R=img._rmap; if(R&&img._src&&x>=1420) return [img._src,R.ax+R.s*x,R.ay+R.s*y,R.s*w,R.s*h];
   const s=img.naturalWidth/1920; return [img,x*s,y*s,w*s,h*s]; }
 function crop(img,x,y,w,h,k,mode){
   const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
@@ -626,6 +676,7 @@ function setBadgeId(id,c,t){const b=document.getElementById(id);b.className='bad
 function clearMasteries(){mast.img=null;mast.counts=null;const p=document.getElementById('mpanel');p.classList.remove('filled');
   ['mView','mErr'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('mDrop').style.display='';setBadgeId('mBadge','','empty');}
 async function screenKind(img){
+  if(img._kind)return img._kind;                                   // already known from its own landmarks
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   const a=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
   let kind=/total\s*stats/i.test(a)?'totals':null;
