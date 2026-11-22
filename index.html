@@ -479,6 +479,13 @@ async function readRow(img,y){
     const m=Array(11).fill('').map((_,j)=>out.map(o=>o[j]).find(Boolean)||'');
     if(rowOk(m))return {cells:m,ok:true};
   }
+  // one extra digit read into a bonus cell ("+750" -> "+7530"): if dropping exactly one digit makes the row add up, and
+  // only one such fix exists, the row total proves it
+  const fixes=new Set(), m0=Array(11).fill('').map((_,j)=>out.map(o=>o[j]).find(Boolean)||'');
+  for(const cells of [...out,m0]) for(let j=1;j<10;j++){ const c=cells[j]; if(!c)continue;
+    for(let q=0;q<c.length;q++){ if(!/\d/.test(c[q]))continue; const t=c.slice(0,q)+c.slice(q+1); if(!/\d/.test(t))continue;
+      const try_=cells.slice(); try_[j]=t; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } }
+  if(fixes.size===1) return {cells:JSON.parse([...fixes][0]),ok:true};
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
 }
@@ -637,7 +644,8 @@ async function heroFromHeader(img,from){
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
   relic.name=(await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
-  relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1');
+  relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1')
+    .replace(/^\+4(\d{2})$/,'+$1');                                              // '+' read as '4': "+415" -> "+15"
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   // bonus boxes: read each box separately (name on top, value below), try two treatments, keep what makes sense
   const RNAMES=['HP','ATK','DEF','SPD','ACC','RES','C. RATE','C. DMG'];
