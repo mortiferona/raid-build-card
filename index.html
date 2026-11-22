@@ -328,6 +328,10 @@ async function handleBulk(files){
     const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
     queue.push({unknown:true,img,tag,name:f.name,batch});
   }
+  // all item screenshots of one person share the same item window: take the common frame of the batch (median per screen size)
+  const groups={}; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(!r)continue; const k=r.W+'x'+r.H; (groups[k]=groups[k]||[]).push(r); }
+  for(const k in groups){ const g=groups[k]; if(g.length<2)continue; const med=f=>{const v=g.map(r=>r[f]).sort((a,b)=>a-b);return v[v.length>>1];};
+    POPS[k]={s:med('s'),T:med('T'),L:med('L'),W:g[0].W,H:g[0].H,batch:true}; }
   pump();
 }
 (()=>{const z=document.getElementById('bulk'),fi=document.getElementById('bulkFile');
@@ -346,6 +350,22 @@ function anchorOf(kind,x,y){
   if(y<80)return 'C'; return x<720?'L':(x>=1150?'R':'C');           // relic / skills (champion screen)
 }
 const ABASE={L:0,C:960,R:1920};
+/* item window: always top-left in the game, its height is always 534 units (its width follows the text).
+   Found by its light-blue frame, so it needs no template of the whole screen. */
+const POP_H=534.5, POP_X=9.5, POPS={};
+function popupRect(img){
+  const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,Math.round(W*0.45),H).data,w=Math.round(W*0.45);
+  const cy=(x,y)=>{const k=(y*w+x)*4;return d[k+1]>150&&d[k+2]>170&&d[k]<120;};
+  let xL=-1; for(let x=0;x<Math.round(W*0.10)&&xL<0;x++){let n=0;for(let y=0;y<H;y++)if(cy(x,y))n++; if(n>=H*0.25)xL=x;}
+  if(xL<0)return null;
+  const seg=Math.round(W*0.2), rows=[];
+  for(let y=0;y<H;y++){let n=0;for(let x=xL;x<xL+seg&&x<w;x++)if(cy(x,y))n++; if(n>=seg*0.7)rows.push(y);}
+  if(rows.length<2)return null;
+  const top=rows[0]; let bot=-1; for(const y of rows){const h=y-top; if(h>=H*0.3&&h<=H*0.78)bot=y;}
+  if(bot<0)return null;
+  const sc=(bot-top)/POP_H; return {s:sc,T:top,L:xL-POP_X*sc,W,H};
+}
 // windows narrower than 16:9: the champion screen keeps its top part glued to the top and its bottom part (Tavern,
 // Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
 function vAnchorOf(kind,x,y){
@@ -402,7 +422,8 @@ function drawNormalized(img,kind,F){
   g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
   const strip=(xa,xb,ya,yb,A,V)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),(F.y0B===undefined||!V?F.y0:V==='B'?F.y0B:(F.y0+F.y0B)/2)+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
   if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
-  else if(kind==='item'){ strip(0,520,0,1080,'L'); strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); }
+  else if(kind==='item'){ if(F.pop) g.drawImage(img,F.pop.L,F.pop.T,520*F.pop.s,1080*F.pop.s,0,0,520,1080); else strip(0,520,0,1080,'L');
+    if(F.off){ strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); } }
   else { strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
     strip(0,480,80,940,'L'); strip(0,480,940,1080,'L','B'); strip(480,720,80,400,'L'); strip(480,720,400,1080,'L','B');
     strip(720,1150,80,400,'C'); strip(720,1150,400,1080,'C','B'); strip(1150,1420,80,400,'R'); strip(1150,1420,400,1080,'R','B');
@@ -414,6 +435,15 @@ async function autoNormalize(img){
   setStatus('Finding the game in the screenshot…');
   const words=await ocrWords(img); let best=null,bk=null;
   for(const k of Object.keys(REFK)){ const f=fitKind(k,words,img.naturalWidth); if(f&&(!best||f.n>best.n)){best=f;bk=k;} }
+  // item window: placed by its own frame; within one batch the same screen size gives the same frame (backup when one isn't found)
+  let pop=popupRect(img); const key=img.naturalWidth+'x'+img.naturalHeight, med=POPS[key];
+  if(pop&&med&&med.batch&&(Math.abs(pop.s-med.s)>med.s*0.02||Math.abs(pop.T-med.T)>3||Math.abs(pop.L-med.L)>3)) pop=med;   // this one disagrees with the rest
+  if(pop){ if(!med||!med.batch)POPS[key]=pop; } else if((!best||best.n<3||bk==='item')&&POPS[key]&&bk!=='totals'&&bk!=='masteries') pop=POPS[key];
+  if(pop&&(!best||best.n<3||bk==='item')){
+    const F=best&&bk==='item'?{...best,pop}:{s:pop.s,y0:pop.T,pop};
+    const out=await drawNormalized(img,'item',F); out._src=img; out._pop=pop;
+    return {img:out,kind:'item',fit:F};
+  }
   if(!best||best.n<3)return {img,kind:null};
   const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
   if(plain)return {img,kind:bk};
@@ -467,9 +497,12 @@ const TCOLS=['Basic Stats','Artifacts','Affinity Bonuses','Classic Arena','Maste
 const TRIGHT=[222,382,541,700,860,1038,1252,1401,1560,1720,1878];
 const TROWY=[396,461,526,591,656,721,786,851,916];
 const totals={rows:null,area:''};
+// read from the original screenshot where we know exactly where the item window is (one resize instead of two)
+function src(img,x,y,w,h){ const P=img._pop; if(P&&img._src&&x+w<=520) return [img._src,P.L+P.s*x,P.T+P.s*y,P.s*w,P.s*h];
+  const s=img.naturalWidth/1920; return [img,x*s,y*s,w*s,h*s]; }
 function crop(img,x,y,w,h,k,mode){
   const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
-  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,x*s,y*s,w*s,h*s,0,0,c.width,c.height);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(...src(img,x,y,w,h),0,0,c.width,c.height);
   if(mode){const d=g.getImageData(0,0,c.width,c.height),p=d.data;
     for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11; const v=mode==='bw'?(l>140?0:255):mode==='bw2'?(l>175?0:255):(255-l); p[i]=p[i+1]=p[i+2]=v;} g.putImageData(d,0,0);}
   return c;
@@ -617,7 +650,7 @@ const relic={}; const bless={}; const champ={};
 function pxData(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const g=c.getContext('2d');g.drawImage(img,0,0);
   const d=g.getImageData(0,0,c.width,c.height).data,W=c.width,s=img.naturalWidth/1920;return (x,y)=>{const k=(Math.round(y*s)*W+Math.round(x*s))*4;return [d[k],d[k+1],d[k+2]];};}
 function cropURL(img,x,y,w,h,type){const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);
-  c.getContext('2d').drawImage(img,x*s,y*s,w*s,h*s,0,0,c.width,c.height);return c.toDataURL(type||'image/png');}
+  c.getContext('2d').drawImage(...src(img,x,y,w,h),0,0,c.width,c.height);return c.toDataURL(type||'image/png');}
 function rarityByColor([r,g,b]){ // label background colours used by the game
   if(r>200&&g<110&&b<90)return 'Mythical'; if(r>200&&g>110&&g<175&&b<80)return 'Legendary';
   if(r>150&&b>150&&g<110)return 'Epic'; if(b>170&&r<110)return 'Rare'; if(g>160&&r<120&&b<120)return 'Uncommon'; return '';}
@@ -905,18 +938,18 @@ function prep(img){
   const s=img.naturalWidth/1920;              // layout scales with width (16:9 screenshots)
   const cx=25*s,cy=0,cw=475*s,ch=290*s,k=3*(1/s);
   const c=document.createElement('canvas'); c.width=Math.round(cw*k); c.height=Math.round(ch*k);
-  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,cx,cy,cw,ch,0,0,c.width,c.height);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(...src(img,25,0,475,290),0,0,c.width,c.height);
   const d=g.getImageData(0,0,c.width,c.height),p=d.data;
   for(let i=0;i<p.length;i+=4){const r=p[i],gg=p[i+1],b=p[i+2];
     const dark=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120);
     const v=dark?0:255; p[i]=p[i+1]=p[i+2]=v;}
   g.putImageData(d,0,0);
   const ic=document.createElement('canvas'); ic.width=ic.height=128;
-  ic.getContext('2d').drawImage(img,36*s,50*s,96*s,96*s,0,0,128,128);
+  ic.getContext('2d').drawImage(...src(img,36,50,96,96),0,0,128,128);
   // value column of the 4 substat rows (x 255–480, y 155–290 @1920)
   const vx=255*s,vy=155*s,vw=225*s,vh=135*s,vk=3/s;
   const v=document.createElement('canvas'); v.width=Math.round(vw*vk); v.height=Math.round(vh*vk);
-  const vg=v.getContext('2d'); vg.imageSmoothingQuality='high'; vg.drawImage(img,vx,vy,vw,vh,0,0,v.width,v.height);
+  const vg=v.getContext('2d'); vg.imageSmoothingQuality='high'; vg.drawImage(...src(img,255,155,225,135),0,0,v.width,v.height);
   const vd=vg.getImageData(0,0,v.width,v.height),vp=vd.data;
   for(let i=0;i<vp.length;i+=4){const r=vp[i],gg=vp[i+1],b=vp[i+2];
     const t=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120); vp[i]=vp[i+1]=vp[i+2]=t?0:255;}
