@@ -309,7 +309,7 @@ function aspectNote(img,name){const log=document.getElementById('blog');const t=
 async function identifySlot(img){
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const t=(await worker.recognize(crop(img,25,0,475,125,2,'bw'))).data.text;
-  for(const k of Object.keys(ARMOR)) if(new RegExp('\\b'+k+'\\b','i').test(t)) return ARMOR[k];
+  {const k=slotWord(t); if(k) return ARMOR[k];}
   if(!/set\s*[:;]/i.test(t)) return highlightSlot(img);                 // not an item window → old check
   // accessory (the game shows the faction instead of the slot): which of the bottom three is highlighted
   const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
@@ -338,7 +338,7 @@ async function handleBulk(files){
 })();
 /* ---------- universal screenshot normaliser: finds the game, works out its scale and aspect,
    and rebuilds a standard 1920x1080 view (left-, centre- and right-anchored parts placed correctly) ---------- */
-const REFK={"item":{"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352]],"storage":[[1025,356]],"equipped":[[238,378],[328,408]],"bonus":[[126,406]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]]},"totals":{"showing":[[1224,228]],"area":[[1312,226],[1694,306],[1606,226]],"basic":[[132,320]],"stats":[[194,320]],"artifacts":[[336,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320]],"total":[[1850,320],[149,992]],"guardians":[[984,334]],"rate":[[100,656]],"ignore":[[76,918]],"artifact":[[231,992],[524,992],[915,992]],"bonus":[[322,992]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"selected":[[1696,226]]},"masteries":{"offense":[[330,150]],"defense":[[960,150]],"support":[[1590,150]]},"relic":{"rank":[[147,133]],"info":[[1278,208]],"equipped":[[1629,224]],"relic":[[1738,222]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]],"champion":[[616,570],[194,1011]],"edit":[[1670,900]],"tavern":[[1246,922]],"reviews":[[617,941]],"vaults":[[312,1008]]},"skills":{"rank":[[147,132]],"info":[[1278,208]],"skills":[[1669,222]],"power":[[1251,336]],"level":[[1555,423],[1759,423],[1555,673],[1748,673]],"champion":[[616,570],[194,1011]],"lore":[[618,596]],"skins":[[1252,586]],"aura":[[1550,764]],"blessing":[[1787,764]],"reviews":[[617,941]],"tavern":[[1246,922]],"vaults":[[312,1008]],"battles":[[1579,1032]]}};
+const REFK={"item":{"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"recommended":[[688,264]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352]],"storage":[[1025,356]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"total":[[1664,702]],"stats":[[1735,703]]},"totals":{"showing":[[1224,228]],"area":[[1312,226],[1694,306],[1606,226]],"basic":[[132,320]],"stats":[[194,320]],"artifacts":[[336,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320]],"total":[[1850,320],[149,992]],"guardians":[[984,334]],"rate":[[100,656]],"ignore":[[76,918]],"artifact":[[231,992],[524,992],[915,992]],"bonus":[[322,992]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"selected":[[1696,226]]},"masteries":{"offense":[[330,150]],"defense":[[960,150]],"support":[[1590,150]]},"relic":{"rank":[[147,133]],"info":[[1278,208]],"equipped":[[1629,224]],"relic":[[1738,222]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]],"champion":[[616,570],[194,1011]],"edit":[[1670,900]],"tavern":[[1246,922]],"reviews":[[617,941]],"vaults":[[312,1008]]},"skills":{"rank":[[147,132]],"info":[[1278,208]],"skills":[[1669,222]],"power":[[1251,336]],"level":[[1555,423],[1759,423],[1555,673],[1748,673]],"champion":[[616,570],[194,1011]],"lore":[[618,596]],"skins":[[1252,586]],"aura":[[1550,764]],"blessing":[[1787,764]],"reviews":[[617,941]],"tavern":[[1246,922]],"vaults":[[312,1008]],"battles":[[1579,1032]]}};   // item: only fixed UI words — the set text in the popup changes per set
 function anchorOf(kind,x,y){
   if(kind==='totals'||kind==='masteries')return 'C';
   if(kind==='item')return x<520?'L':(x>=1420?'R':'C');
@@ -367,7 +367,8 @@ function fitKind(kind,words,imgW){
       M.forEach(m=>{ if(m.a===A&&Math.abs(m.o.y-(y0+sc*m.r[1]))<tol)v.push(m.o.x-sc*(m.r[0]-ABASE[A])); });
       if(v.length){v.sort((a,b)=>a-b);off[A]=v[v.length>>1];} });
     if(off.C===undefined){ if(off.L!==undefined)off.C=off.L+960*sc; else if(off.R!==undefined)off.C=off.R-960*sc; else return null; }
-    if(off.L===undefined)off.L=Math.max(0,Math.min(off.C-960*sc,off.C-imgW/2));
+    // left edge of the game: mirror the right edge around the centre when the right panel was found
+    if(off.L===undefined)off.L=off.R!==undefined?Math.max(0,off.C-Math.max(960*sc,off.R-off.C)):Math.max(0,Math.min(off.C-960*sc,off.C-imgW/2));
     if(off.R===undefined)off.R=off.C+(off.C-off.L);
     let n=0,res=0; const used=new Set();
     M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=y0+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
@@ -551,7 +552,7 @@ function countMasteries(img){
   const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
   return MTREES.map(([name,,xs])=>{let lit=0;MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{if(ri===0&&(ci===0||ci===3))return;
     let n=0,t=0;for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){const k=(Math.round((y+dy)*s)*W+Math.round((x+dx)*s))*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;}
-    if(n/t>0.25)lit++;}));return [name,lit];});
+    if(n/t>0.12)lit++;}));return [name,lit];});   // lit nodes measure 24–49 %, dark ones ~0 %
 }
 function processMasteries(img){
   const counts=countMasteries(img); let use=counts.filter(c=>c[1]>0).map(c=>c[0]); if(!use.length)use=['Offense','Defense'];
@@ -610,7 +611,8 @@ function snapFaction(t){if(!t)return '';let best=['',99];FACTIONS.forEach(f=>{co
 function avgColor(px,x0,y0,x1,y1){let r=0,g=0,b=0,n=0;for(let x=x0;x<x1;x+=2)for(let y=y0;y<y1;y+=2){const p=px(x,y),mx=Math.max(...p),mn=Math.min(...p);if(mx<150||mx-mn<90)continue;r+=p[0];g+=p[1];b+=p[2];n++;}return n?[r/n,g/n,b/n]:[0,0,0];}
 async function readChampDetails(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
-  const role=(await worker.recognize(crop(img,1150,140,170,45,2,'bw'))).data.text.replace(/[^A-Za-z]/g,'');
+  const role=(((await worker.recognize(crop(img,1150,140,170,45,2,'bw'))).data.text.match(/attack|defen[cs]e|support|hp/i)||[''])[0]   // "BeeAttack" -> Attack
+    .replace(/^\w+$/,w=>({attack:'Attack',defense:'Defense',defence:'Defense',support:'Support',hp:'HP'})[w.toLowerCase()]||w));
   const fac=snapFaction((await worker.recognize(crop(img,490,255,215,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim());
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const rar=rarityByColor(avgColor(px,1162,104,1306,134)), aff=affinityByColor(px);
@@ -848,6 +850,7 @@ async function pump(){
     const nums=(await worker.recognize(valCrop)).data.text.split('\n').map(l=>l.replace(/\s+/g,'')).filter(Boolean);
     await worker.setParameters({tessedit_char_whitelist:''});
     mergeNums(item,nums);
+    await rowCheck(img,item);
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -912,6 +915,8 @@ function fixNum(v,stat){
 function splitGlyph(raw,stat){
   // "36+7", "6%+8%", "64436" (lost '+'), "11+8 [MAX]"
   raw=fixNum(raw.replace(/\[?MAX\]?/i,'').trim(),stat);
+  // the green '%' of a glyph comes out as '°', '%%' or '%6' in some browsers: "6%+3°%%", "6%+3%6" -> "6%+3%"
+  raw=raw.replace(/°/g,'%').replace(/%{2,}/g,'%'); {const q=raw.match(/^(\d+%)\s*\+\s*(\d+%)\S+$/); if(q)raw=q[1]+'+'+q[2];}
   let m=raw.match(/^(\d+%?)\s*\+\s*(\d+%?)$/);
   if(m){ // a % stat always gets a % glyph; the green '%' is often lost or read as digits ("+4%" -> "455")
     let v=m[1],g=m[2],sure=true;
@@ -956,13 +961,16 @@ function parse(text){
   }
   return it;
 }
+// slot name in the item window title: ignore the "Set: …" line (there is a set called Shield) and OCR spaces ("Wea pon")
+function slotWord(text){ const head=String(text||'').split('\n').filter(l=>l.trim()).filter(l=>!/set\s*[:;]/i.test(l)).slice(0,2).join('').replace(/\s+/g,'');
+  return Object.keys(ARMOR).find(k=>new RegExp(k,'i').test(head))||null; }
 const ARMOR={Weapon:'Weapon',Helmet:'Helmet',Shield:'Shield',Gauntlets:'Gloves',Chestplate:'Chest',Boots:'Boots',Ring:'Ring',Amulet:'Amulet'};   // no 'Banner': the faction 'Banner Lords' would match it
 const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banner:['HP','ATK','DEF','ACC','RES']};
 function checkSlot(el,item,text,hl){
   const want=el.dataset.slot;
   if(hl) return hl===want?null:{msg:`This is the <b>${hl}</b> screenshot, not ${want}.`,move:hl};
   if(!item.set && !item.main) return {probe:true,msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`+TIP};
-  const found=Object.keys(ARMOR).find(k=>new RegExp('\\b'+k+'\\b','i').test(text));
+  const found=slotWord(text);
   const isAcc=!!ACC_MAIN[want];
   if(found){
     const got=ARMOR[found];
@@ -1008,11 +1016,26 @@ function applyHero(el,txt,stars){
     mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
   }
 }
+// third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
+async function rowCheck(img,it){
+  // used only as a referee: alone it is often wrong, so it never overrides two agreeing readings
+  await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789+%'});
+  try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
+    const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
+    if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
+    const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'bw'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+    const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
+    if(row===cur)continue;
+    if(dig!==null&&dig===row){ sub.v=row; sub.g=sub.ng||sub.g; sub.sure=true; continue; }   // outvoted 2:1
+    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur)))continue;             // a dropped digit is not a conflict
+    sub.sure=false;                                                                       // no majority → ask to check
+  } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
+}
 function mergeNums(it,nums){
   // digits-only reading of the value column; trust it when it parses cleanly
   it.subs.forEach((sub,i)=>{
     const t=(nums[i]||'').replace(/MAX$/,''); if(!t)return;
-    const r=splitGlyph(t,sub.s);
+    const r=splitGlyph(t,sub.s); sub.nv=r.v; sub.ng=r.g||'';
     // green '+' read as '4+' in the first pass ("17+15" -> "174+15"); the digits pass saw it right
     if(r.sure && sub.g && r.g===sub.g && sub.v===r.v+'4'){ sub.v=r.v; sub.sure=true; return; }
     if(sub.sure && /^\d+%?$/.test(sub.v||''))return;                 // first reading clean — keep it
