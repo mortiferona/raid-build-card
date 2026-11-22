@@ -720,7 +720,15 @@ function readSlot(el){
   return {slot:el.dataset.slot,icon:q('.thumb img').getAttribute('src'),set:v('.f-set'),ms:v('.f-ms'),mv:v('.f-mv'),as:v('.f-as'),av:v('.f-av'),
     subs:[...el.querySelectorAll('.row.sub')].map(r=>({s:r.querySelector('.f-ss').value,r:r.querySelector('.f-sr').value.trim(),v:r.querySelector('.f-sv').value.trim(),g:r.querySelector('.f-sg').value.trim()})).filter(x=>x.s||x.v)};
 }
+// the Relic column of Total Stats tells which stat each relic bonus really is: fix a misread bonus name from it
+function reconcileRelic(){
+  if(!relic.stats||!totals.rows)return;
+  relic.stats=relic.stats.map(([n,v])=>{ const x=tnum(v); if(x===null||isNaN(x))return [n,v];
+    const hit=totals.rows.map((r,i)=>[TROWS[i],r]).filter(([,r])=>r.ok&&r.cells[8]&&tnum(r.cells[8])===x&&(/%/.test(r.cells[8])===/%/.test(v)));
+    return hit.length===1?[hit[0][0],v]:[n,v]; });
+}
 function buildCard(){
+  reconcileRelic();
   const items=[...document.querySelectorAll('.slot')].map(el=>({slot:el.dataset.slot,d:readSlot(el)}));
   const name=document.getElementById('hName').value.trim()||'Champion', lvl=document.getElementById('hLvl').value.trim();
   const sets={}; items.forEach(i=>{if(i.d&&i.d.set)sets[i.d.set]=(sets[i.d.set]||0)+1;});
