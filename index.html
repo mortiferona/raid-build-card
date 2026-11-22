@@ -238,6 +238,7 @@ SLOTS.forEach(name=>{
   <div class="mis"></div>
   <div class="form">
     <div class="setrow"><label>Set</label><input class="f-set"></div>
+    <div class="setrow namerow" style="display:none;margin-top:6px"><label>Name</label><input class="f-name" placeholder="special accessory name, if any"></div>
     <div class="row main" style="margin-top:8px"><select class="f-ms">${opt('')}</select><input class="f-mv" placeholder="value"><select class="f-as">${opt('')}</select><input class="f-av asc" placeholder="bonus"></div>
     <div class="row" style="margin-top:8px"><label>Substat</label><label>Rolls</label><label>Value</label><label>Glyph</label></div>
     ${[0,1,2,3].map(i=>`<div class="row sub" data-i="${i}"><select class="f-ss">${opt('')}</select><input class="f-sr" placeholder="0"><input class="f-sv"><input class="f-sg glyph" placeholder="—"></div>`).join('')}
@@ -717,7 +718,7 @@ const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 function readSlot(el){
   const q=c=>el.querySelector(c), v=c=>(q(c)&&q(c).value||'').trim();
   if(!el.classList.contains('filled')||el.querySelector('.err').style.display==='block')return null;
-  return {slot:el.dataset.slot,icon:q('.thumb img').getAttribute('src'),set:v('.f-set'),ms:v('.f-ms'),mv:v('.f-mv'),as:v('.f-as'),av:v('.f-av'),
+  return {slot:el.dataset.slot,icon:q('.thumb img').getAttribute('src'),set:v('.f-set'),name:v('.f-name'),ms:v('.f-ms'),mv:v('.f-mv'),as:v('.f-as'),av:v('.f-av'),
     subs:[...el.querySelectorAll('.row.sub')].map(r=>({s:r.querySelector('.f-ss').value,r:r.querySelector('.f-sr').value.trim(),v:r.querySelector('.f-sv').value.trim(),g:r.querySelector('.f-sg').value.trim()})).filter(x=>x.s||x.v)};
 }
 // the Relic column of Total Stats tells which stat each relic bonus really is: fix a misread bonus name from it
@@ -738,7 +739,7 @@ function buildCard(){
     const subs=d.subs.map(x=>`<div class="sr"><span>${esc(x.s)}${x.r&&x.r!=='0'?' ('+esc(x.r)+')':''}</span><b>${esc(x.v)}</b><i>${x.g?'+'+esc(x.g):''}</i></div>`).join('');
     return `<div class="gc"><div class="gtop">${d.icon?`<img src="${d.icon}">`:'<div class="ph"></div>'}<div class="gm"><div class="sl">${slot}</div>
       <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
-      ${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
+      ${d.name?`<div class="setn">${esc(d.name)}</div>`:''}${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
   const stars='★'.repeat(hero.stars||0);
   const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
   const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
@@ -958,7 +959,9 @@ function splitGlyph(raw,stat){
 }
 function parse(text){
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-  const it={set:'',main:null,asc:null,subs:[]};
+  const it={set:'',name:'',main:null,asc:null,subs:[]};
+  // special accessories carry their own name in the title ("Revenge Amulet"); standard ones just say "Amulet"
+  { const m=(lines[0]||'').match(/((?:[A-Z][a-z']+\s+){1,3})(Ring|Amulet|Banner)\b/); if(m) it.name=(m[1]+m[2]).trim(); }
   for(const ln of lines){
     let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){it.set=m[1].replace(/\s+x$/i,'').trim();continue;}
     if(!it.main){
@@ -1066,10 +1069,12 @@ function fill(el,it,raw){
   el.querySelector('.drop').style.display='none';
   el.querySelector('.thumb').style.display='flex';
   el.querySelector('.form').style.display='block';
-  el.querySelector('.setname').textContent=it.set?('Set: '+it.set):'';
+  el.querySelector('.setname').textContent=[it.name,it.set?('Set: '+it.set):''].filter(Boolean).join(' · ');
   const q=c=>el.querySelector(c); let issues=0;
   const set=(node,val,ok=true)=>{node.value=val||'';node.classList.toggle('bad',!ok);if(!ok)issues++;};
-  set(q('.f-set'),it.set,!!it.set||el.dataset.slot==='Ring'||el.dataset.slot==='Amulet');   // rings and amulets have no set
+  const acc=!!ACC_MAIN[el.dataset.slot];
+  set(q('.f-set'),it.set,!!it.set||acc);   // standard faction accessories have no set
+  q('.namerow').style.display=acc?'':'none'; set(q('.f-name'),acc?it.name:'');
   set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
   set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v));
   set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v);
