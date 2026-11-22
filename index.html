@@ -346,6 +346,12 @@ function anchorOf(kind,x,y){
   if(y<80)return 'C'; return x<720?'L':(x>=1150?'R':'C');           // relic / skills (champion screen)
 }
 const ABASE={L:0,C:960,R:1920};
+// windows narrower than 16:9: the champion screen keeps its top part glued to the top and its bottom part (Tavern,
+// Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
+function vAnchorOf(kind,x,y){
+  if(kind!=='relic'&&kind!=='skills'||y<80)return 'T';
+  if(x<480)return y>=940?'B':'T'; if(x<1420)return y>=400?'B':'T'; return y>=740?'B':'T';
+}
 async function ocrWords(img){
   const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
   const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
@@ -360,7 +366,7 @@ function fitKind(kind,words,imgW){
   const O=words.map(o=>{ if(D[o.t])return o; if(o.t.length<5)return null;          // tolerate one misread letter ("offens")
       const k=keys.find(k=>k.length>=5&&Math.abs(k.length-o.t.length)<=1&&lev(k,o.t)<=1); return k?{...o,t:k}:null; }).filter(Boolean);
   if(O.length<3)return null;
-  const M=[]; O.forEach(o=>D[o.t].forEach(r=>M.push({o,r,a:anchorOf(kind,r[0],r[1])})));
+  const M=[]; O.forEach(o=>D[o.t].forEach(r=>M.push({o,r,a:anchorOf(kind,r[0],r[1]),va:vAnchorOf(kind,r[0],r[1])})));
   let best=null;
   const evalH=(sc,y0,offs)=>{ const tol=14*Math.max(sc,0.5); const off={...offs};
     // estimate missing anchor offsets from y-consistent words
@@ -371,27 +377,34 @@ function fitKind(kind,words,imgW){
     // left edge of the game: mirror the right edge around the centre when the right panel was found
     if(off.L===undefined)off.L=off.R!==undefined?Math.max(0,off.C-Math.max(960*sc,off.R-off.C)):Math.max(0,Math.min(off.C-960*sc,off.C-imgW/2));
     if(off.R===undefined)off.R=off.C+(off.C-off.L);
+    // bottom-glued parts: their own y offset (same as y0 unless the window is narrower than 16:9)
+    let y0B=y0; { const v=[]; M.forEach(m=>{ if(m.va!=='B')return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]); if(Math.abs(m.o.x-px)>tol)return;
+        const d=m.o.y-(y0+sc*m.r[1]); if(d>-tol&&d<120*sc)v.push(d); });
+      if(v.length){v.sort((a,b)=>a-b); const md=v[v.length>>1]; if(md>tol*0.5)y0B=y0+md;} }
     let n=0,res=0; const used=new Set();
-    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=y0+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
+    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=(m.va==='B'?y0B:y0)+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
       if(d<tol){n++;res+=d;used.add(m.o);} });
-    return {n,res,s:sc,y0,off};
+    return {n,res,s:sc,y0,y0B,off};
   };
   for(let i=0;i<M.length;i++)for(let j=0;j<M.length;j++){ if(i===j||M[i].o===M[j].o)continue;
     const a=M[i],b=M[j]; let sc=null;
-    if(Math.abs(b.r[1]-a.r[1])>120) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
+    if(Math.abs(b.r[1]-a.r[1])>120&&a.va===b.va) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
     else if(a.a===b.a&&Math.abs(b.r[0]-a.r[0])>200&&Math.abs(b.r[1]-a.r[1])<40) sc=(b.o.x-a.o.x)/(b.r[0]-a.r[0]);
     if(!sc||sc<0.3||sc>1.8)continue;
-    const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
+    if(a.va!=='T')continue; const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
     const h=evalH(sc,y0,offs); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
   return best;
 }
 function drawNormalized(img,kind,F){
   const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
   g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
-  const strip=(xa,xb,ya,yb,A)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),F.y0+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
+  const strip=(xa,xb,ya,yb,A,V)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),(V==='B'&&F.y0B!==undefined?F.y0B:F.y0)+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
   if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
   else if(kind==='item'){ strip(0,520,0,1080,'L'); strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); }
-  else { strip(0,1920,0,80,'C'); strip(0,720,80,1080,'L'); strip(720,1150,80,1080,'C'); strip(1150,1920,80,1080,'R'); }
+  else { strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
+    strip(0,480,80,940,'L'); strip(0,480,940,1080,'L','B'); strip(480,720,80,400,'L'); strip(480,720,400,1080,'L','B');
+    strip(720,1150,80,400,'C'); strip(720,1150,400,1080,'C','B'); strip(1150,1420,80,400,'R'); strip(1150,1420,400,1080,'R','B');
+    strip(1420,1920,80,740,'R'); strip(1420,1920,740,1080,'R','B'); }
   return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
 }
 async function autoNormalize(img){
@@ -399,7 +412,7 @@ async function autoNormalize(img){
   const words=await ocrWords(img); let best=null,bk=null;
   for(const k of Object.keys(REFK)){ const f=fitKind(k,words,img.naturalWidth); if(f&&(!best||f.n>best.n)){best=f;bk=k;} }
   if(!best||best.n<3)return {img,kind:null};
-  const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
+  const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
   if(plain)return {img,kind:bk};
   return {img:await drawNormalized(img,bk,best),kind:bk,fit:best};
 }
@@ -644,7 +657,10 @@ async function heroFromHeader(img,from){
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
-  relic.name=(await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
+  { const clean=t=>t.replace(/[^A-Za-z' \-]/g,'').replace(/\s+/g,' ').trim().replace(/\bl(?=[^aeiouy\s])/g,'I');   // capital I read as l
+    const score=t=>t.split(' ').filter(w=>/^[A-Z][a-z']+$/.test(w)||/^(of|the)$/.test(w)).length*2-t.split(' ').length;   // relic names are Title Case
+    const a=clean((await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text), b=clean((await worker.recognize(crop(img,1495,245,405,45,2,'inv'))).data.text);
+    relic.name=score(b)>score(a)?b:a; }
   relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1')
     .replace(/^\+4(\d{2})$/,'+$1');                                              // '+' read as '4': "+415" -> "+15"
   await worker.setParameters({tessedit_pageseg_mode:'6'});
