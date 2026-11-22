@@ -157,64 +157,127 @@ input[type=file]{display:none}
 <body>
 <div id="sim" style="max-width:1180px;margin:14px auto 0;padding:16px 18px;border:2px dashed #d4a017;border-radius:14px;background:#1a1408;color:#f3e6c4;font:14px/1.45 system-ui,Segoe UI,sans-serif">
   <div style="font-size:18px;font-weight:700;color:#ffcf4a">TEST POLYGON — not the live site</div>
-  <div style="opacity:.85;margin:4px 0 10px">1) Pick your original screenshots (1920×1080). 2) Choose how they should look as if taken on another PC. 3) Generate, check the previews, then press <b>Feed to reader</b> — only then they go into the reader below.</div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+  <div style="opacity:.85;margin:4px 0 10px">Pick a set of screenshots, tick the screen sizes to simulate, press <b>Run</b>. Each combination is generated, fed to the reader below, compared with the unchanged originals and written to a log file.</div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px">
+    <label>Set name <input id="simSet" value="Titus" style="width:110px"></label>
     <label>Screenshots <input type="file" id="simIn" accept="image/*" multiple></label>
-    <label>Screen resolution
-      <select id="simRes">
-        <option value="1280x720">1280×720</option><option value="1366x768">1366×768</option><option value="1536x864">1536×864 (1920×1080 at 125%)</option>
-        <option value="1600x900">1600×900</option><option value="1920x1080" selected>1920×1080</option><option value="2560x1440">2560×1440</option><option value="3840x2160">3840×2160</option>
-      </select></label>
-    <label>How it was taken
-      <select id="simMode">
-        <option value="full">Full screen</option>
-        <option value="win">Window with title bar + taskbar</option>
-        <option value="small">Smaller window on the desktop</option>
-      </select></label>
-    <label>File type
-      <select id="simFmt"><option value="png" selected>PNG (normal screenshot)</option><option value="jpg">JPG 75%</option><option value="webp">WebP 70% (like Discord)</option></select></label>
-    <button id="simGo" style="padding:7px 14px;border-radius:8px;border:0;background:#d4a017;color:#1a1408;font-weight:700;cursor:pointer">Generate</button>
-    <button id="simFeed" disabled style="padding:7px 14px;border-radius:8px;border:0;background:#3fa34d;color:#fff;font-weight:700;cursor:pointer;opacity:.5">Feed to reader</button>
+    <span id="simCount" style="opacity:.8">no set loaded</span>
+    <button id="simDir" class="sb">Choose log folder (Downloads/Cards_Logs)</button>
+    <span id="simDirName" style="opacity:.8">logs go to Downloads</span>
+    <span id="simBrowser" style="padding:3px 9px;border-radius:7px;background:#2a2010;border:1px solid #6b5a2a"></span>
   </div>
-  <div id="simNote" style="margin-top:8px;opacity:.75;font-size:12.5px">Note: only 16:9 screens are simulated. Other screen shapes (16:10, 4:3, ultrawide) make the game rearrange its own layout — those need real screenshots.</div>
-  <div id="simOut" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:start">
+    <b>Screen</b><div id="simRes"></div>
+    <b>Taken as</b><div id="simMode"></div>
+    <b>File type</b><div id="simFmt"></div>
+  </div>
+  <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button id="simRun" class="sb" style="background:#3fa34d;color:#fff">Run</button>
+    <button id="simStop" class="sb" style="background:#a33">Stop</button>
+    <span id="simProg" style="opacity:.85"></span>
+  </div>
+  <div style="margin-top:6px;opacity:.7;font-size:12.5px">Only 16:9 screens are simulated. Other shapes (16:10, 4:3, ultrawide) make the game rearrange its own layout — those need real screenshots.</div>
+  <table id="simTab" style="margin-top:10px;border-collapse:collapse;font-size:13px;width:100%"></table>
 </div>
+<style>
+#sim .sb{padding:6px 12px;border-radius:8px;border:0;background:#d4a017;color:#1a1408;font-weight:700;cursor:pointer}
+#sim label.ck{display:inline-block;margin:0 10px 4px 0;white-space:nowrap}
+#sim table td,#sim table th{border:1px solid #4d3f1c;padding:4px 6px;text-align:left;vertical-align:top}
+#sim table th{background:#2a2010}
+#sim .ok{color:#7ddc85}#sim .bad{color:#ff8a7a}#sim .warn{color:#ffd166}
+</style>
 <script>
 (()=>{
-  let made=[];
-  const $=id=>document.getElementById(id);
-  const load=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});
-  function render(img,SW,SH,mode){
-    const c=document.createElement('canvas'),g=c.getContext('2d'); g.imageSmoothingQuality='high';
-    const dpi=SH/1080;
-    if(mode==='full'){ c.width=SW; c.height=SH; g.drawImage(img,0,0,SW,SH); return c; }
-    c.width=SW; c.height=SH;
-    const bg=g.createLinearGradient(0,0,SW,SH); bg.addColorStop(0,'#1d3557'); bg.addColorStop(1,'#457b9d'); g.fillStyle=bg; g.fillRect(0,0,SW,SH);
-    const tb=Math.round(31*dpi), task=Math.round(48*dpi);
-    let gh,gw,x,y;
-    if(mode==='win'){ gh=SH-tb-task; gw=Math.round(gh*16/9); x=Math.round((SW-gw)/2); y=tb; }
-    else { gw=Math.round(SW*0.72); gh=Math.round(gw*9/16); x=Math.round(SW*0.09); y=Math.round(SH*0.12); }
-    g.fillStyle='#f3f3f3'; g.fillRect(x,y-tb,gw,tb);                       // window title bar
-    g.fillStyle='#222'; g.font=Math.round(15*dpi)+'px Segoe UI,sans-serif'; g.fillText('Raid: Shadow Legends',x+Math.round(10*dpi),y-Math.round(10*dpi));
-    g.drawImage(img,x,y,gw,gh);
-    g.fillStyle='#dfe6ee'; g.fillRect(0,SH-task,SW,task);                  // taskbar
-    return c;
+const SIM_VERSION='test-1';
+const UA=navigator.userAgent, BROWSER=/Edg\//.test(UA)?'Edge':/OPR\//.test(UA)?'Opera':/Firefox\//.test(UA)?'Firefox':/Chrome\//.test(UA)?'Chrome':'Other';
+const BVER=(UA.match(/(?:Edg|OPR|Firefox|Chrome)\/([\d.]+)/)||['',''])[1];
+const RES=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3200x1800','3840x2160'];
+const RES_ON=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3840x2160'];
+const MODES=[['full','Full screen'],['win','Window + taskbar'],['small','Smaller window on desktop']];
+const FMTS=[['png','PNG'],['jpg','JPG 75%'],['webp','WebP 70% (Discord)']];
+const $=id=>document.getElementById(id);
+const box=(host,items,on)=>{ $(host).innerHTML=items.map(([v,t])=>`<label class="ck"><input type="checkbox" value="${v}" ${on.includes(v)?'checked':''}> ${t}</label>`).join(''); };
+box('simRes',RES.map(r=>[r,r==='orig'?'Original (unchanged — the reference)':r.replace('x','×')+(r==='1536x864'?' (1920×1080 at 125%)':'')]),RES_ON);
+box('simMode',MODES,['full','win']); box('simFmt',FMTS,['png']);
+const picked=h=>[...$(h).querySelectorAll('input:checked')].map(i=>i.value);
+
+let files=[], dir=null, stop=false, baseline={};
+const errs=[]; window.addEventListener('error',e=>errs.push(String(e.message||e))); window.addEventListener('unhandledrejection',e=>errs.push(String(e.reason)));
+$('simBrowser').textContent='Browser: '+BROWSER+' '+BVER+' — open this same address in Edge / Opera / Chrome to test each';
+$('simIn').onchange=()=>{ files=[...$('simIn').files]; $('simCount').textContent=`${files.length} screenshots loaded`; baseline={}; };
+$('simDir').onclick=async()=>{ try{ dir=await window.showDirectoryPicker({id:'cardslogs',mode:'readwrite',startIn:'downloads'}); $('simDirName').textContent='logs → '+dir.name; }catch(e){ $('simDirName').textContent='no folder chosen — logs go to Downloads'; } };
+$('simStop').onclick=()=>{ stop=true; };
+
+const load=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});
+function render(img,SW,SH,mode){
+  const c=document.createElement('canvas'),g=c.getContext('2d'); g.imageSmoothingQuality='high'; c.width=SW; c.height=SH;
+  if(mode==='full'){ g.drawImage(img,0,0,SW,SH); return c; }
+  const dpi=SH/1080, bg=g.createLinearGradient(0,0,SW,SH); bg.addColorStop(0,'#1d3557'); bg.addColorStop(1,'#457b9d'); g.fillStyle=bg; g.fillRect(0,0,SW,SH);
+  const tb=Math.round(31*dpi), task=Math.round(48*dpi); let gh,gw,x,y;
+  if(mode==='win'){ gh=SH-tb-task; gw=Math.round(gh*16/9); x=Math.round((SW-gw)/2); y=tb; }
+  else { gw=Math.round(SW*0.72); gh=Math.round(gw*9/16); x=Math.round(SW*0.09); y=Math.round(SH*0.12); }
+  g.fillStyle='#f3f3f3'; g.fillRect(x,y-tb,gw,tb); g.fillStyle='#222'; g.font=Math.round(15*dpi)+'px Segoe UI,sans-serif'; g.fillText('Raid: Shadow Legends',x+Math.round(10*dpi),y-Math.round(10*dpi));
+  g.drawImage(img,x,y,gw,gh); g.fillStyle='#dfe6ee'; g.fillRect(0,SH-task,SW,task); return c;
+}
+async function makeSet(res,mode,fmt){
+  if(res==='orig') return files.slice();
+  const [SW,SH]=res.split('x').map(Number), type={png:'image/png',jpg:'image/jpeg',webp:'image/webp'}[fmt], q={png:1,jpg:.75,webp:.7}[fmt], out=[];
+  for(const f of files){ const c=render(await load(f),SW,SH,mode); const b=await new Promise(r=>c.toBlob(r,type,q)); out.push(new File([b],f.name.replace(/\.\w+$/,'')+`_${res}_${mode}.${fmt}`,{type})); }
+  return out;
+}
+// what the reader did with every screenshot (kind, scale, offsets, anchors)
+let diag=[], wrapped=false;
+function wrapNormalize(){ if(wrapped)return; wrapped=true; const _an=window.autoNormalize;      // the reader's own function is defined later on the page
+window.autoNormalize=async img=>{ const r=await _an(img); const F=r.fit||{}; diag.push({w:img.naturalWidth,h:img.naturalHeight,kind:r.kind,s:F.s&&+F.s.toFixed(4),y0:F.y0&&+F.y0.toFixed(1),y0B:F.y0B&&+F.y0B.toFixed(1),off:F.off&&Object.fromEntries(Object.entries(F.off).map(([k,v])=>[k,+v.toFixed(1)])),pop:F.pop&&{s:+F.pop.s.toFixed(4),T:F.pop.T,L:+F.pop.L.toFixed(1)},anchor:F.rmap&&{s:+F.rmap.s.toFixed(4),ax:+F.rmap.ax.toFixed(1),ay:+F.rmap.ay.toFixed(1)}}); return r; }; }
+const waitDone=()=>new Promise(res=>{ const t0=Date.now(); const iv=setInterval(()=>{ const st=$('status').textContent; if((!queue.length&&!busy&&/^Done/.test(st))||Date.now()-t0>600000||stop){clearInterval(iv);res(Date.now()-t0);} },500); });
+function snapshot(){
+  const v=(e,c)=>{const n=e.querySelector(c);return n?n.value:'';};
+  const slots={}; document.querySelectorAll('.slot').forEach(e=>{ if(!e.classList.contains('filled'))return; const k=e.dataset.slot;
+    slots[k]={badge:e.querySelector('.badge').textContent,set:v(e,'.f-set'),name:v(e,'.f-name'),main:[v(e,'.f-ms'),v(e,'.f-mv')],asc:[v(e,'.f-as'),v(e,'.f-av')],
+      subs:[...e.querySelectorAll('.row.sub')].map(r=>[...r.querySelectorAll('input,select')].map(n=>n.value)),
+      flagged:[...e.querySelectorAll('.bad')].map(n=>n.className.split(' ').find(c=>c.startsWith('f-'))||n.tagName)}; });
+  return {slots,
+    totals:totals.rows?{badge:$('tBadge').textContent,area:totals.area,rows:totals.rows.map(r=>({ok:r.ok,cells:r.cells}))}:null,
+    relic:Object.fromEntries(Object.entries(relic).filter(([k,v])=>!(typeof v==='string'&&v.startsWith('data:')))),bless:{name:bless.name},masteries:$('mCnt').innerText.replace(/\n/g,' '),
+    hero:{name:hero.name,stars:hero.stars},champ:{...champ,portrait:!!champ.portrait},bulkLog:$('blog').innerText.split('\n')};
+}
+const SKIP=new Set(['bulkLog','badge','img','sets','icon','portrait']);           // pictures are not compared
+const short=v=>{ const t=JSON.stringify(v); return t&&t.length>90?t.slice(0,87)+'…"':t; };
+function compare(a,b,path='',out=[]){
+  if(a===b)return out; if(typeof a!==typeof b||a===null||b===null||typeof a!=='object'){ out.push(`${path}: expected ${short(a)} got ${short(b)}`); return out; }
+  const keys=new Set([...Object.keys(a),...Object.keys(b)]); for(const k of keys){ if(SKIP.has(k))continue; compare(a[k],b[k],path?path+'.'+k:k,out); } return out;
+}
+async function writeLog(name,text){
+  if(dir){ try{ const fh=await dir.getFileHandle(name,{create:true}); const w=await fh.createWritable(); await w.write(text); await w.close(); return 'folder'; }catch(e){ errs.push('log write: '+e); } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download='Cards_Logs_'+name; a.click(); return 'downloads';
+}
+const stamp=()=>new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+$('simRun').onclick=async()=>{
+  if(!files.length){alert('Pick a set of screenshots first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
+  wrapNormalize(); stop=false; const set=($('simSet').value||'set').replace(/[^\w-]/g,'_'), batch=stamp();
+  let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt'); if(!res.length||!modes.length||!fmts.length){alert('Tick at least one screen, one mode and one file type');return;}
+  const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
+  $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
+  const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
+  for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
+    $('simProg').textContent=`running ${i+1}/${combos.length}: ${r} ${m} ${f}…`;
+    resetAll(); for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k]; diag=[]; errs.length=0;
+    const set_=await makeSet(r,m,f); handleBulk(set_); const ms=await waitDone(); if(stop)break;
+    const snap=snapshot(); if(r==='orig')baseline[set]=snap;
+    const diffs=baseline[set]&&r!=='orig'?compare(baseline[set],snap):[];
+    const recog=snap.bulkLog.filter(l=>/^✓/.test(l)).length, fails=snap.bulkLog.filter(l=>/^✗/.test(l));
+    const flagged=Object.entries(snap.slots).filter(([,s])=>s.flagged.length).map(([k,s])=>`${k}(${s.flagged.length})`);
+    const rec={browser:BROWSER+' '+BVER,screen:r,mode:m,format:f,timeMs:ms,recognised:`${recog}/${set_.length}`,failed:fails,flagged,differences:diffs,errors:errs.slice(),diagnostics:diag,files:set_.map(x=>x.name),result:snap};
+    const fname=`${set}_${BROWSER}_${batch}_${String(i+1).padStart(2,'0')}_${r}_${m}_${f}.json`; const where=await writeLog(fname,JSON.stringify(rec,null,1));
+    summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
+    const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
+    $('simTab').insertAdjacentHTML('beforeend',`<tr><td>${r}</td><td>${m}</td><td>${f}</td><td class="${fails.length?'bad':'ok'}">${rec.recognised}${fails.length?'<br>'+fails.map(x=>x.replace(/</g,'&lt;')).join('<br>'):''}</td><td class="${flagged.length?'warn':'ok'}">${flagged.join(', ')||'none'}</td><td class="${cls}">${r==='orig'?'(reference)':(diffs.length?diffs.slice(0,8).join('<br>')+(diffs.length>8?`<br>… ${diffs.length-8} more in the log`:''):'none')}</td><td>${(ms/1000).toFixed(0)} s</td></tr>`);
   }
-  $('simGo').onclick=async()=>{
-    const fs=[...$('simIn').files]; if(!fs.length){alert('Pick your screenshots first');return;}
-    const [SW,SH]=$('simRes').value.split('x').map(Number), mode=$('simMode').value, fmt=$('simFmt').value;
-    const type={png:'image/png',jpg:'image/jpeg',webp:'image/webp'}[fmt], q={png:1,jpg:.75,webp:.7}[fmt];
-    $('simOut').innerHTML=''; made=[];
-    for(const f of fs){ const img=await load(f); const c=render(img,SW,SH,mode);
-      const blob=await new Promise(r=>c.toBlob(r,type,q)); const name=f.name.replace(/\.\w+$/,'')+`_${SW}x${SH}_${mode}.${fmt}`;
-      const file=new File([blob],name,{type}); made.push(file);
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.title=name;
-      const t=document.createElement('img'); t.src=a.href; t.style.cssText='width:150px;border:1px solid #6b5a2a;border-radius:6px'; a.appendChild(t); $('simOut').appendChild(a); }
-    $('simFeed').disabled=false; $('simFeed').style.opacity=1;
-    $('simNote').textContent=`${made.length} screenshots generated as ${SW}×${SH}, ${$('simMode').selectedOptions[0].text}, ${fmt.toUpperCase()}. Click a preview to download it. Press "Feed to reader" to read them.`;
-  };
-  $('simFeed').onclick=()=>{ if(!made.length)return; if(typeof handleBulk!=='function'){alert('Reader not ready yet');return;}
-    document.getElementById('bulk').scrollIntoView({behavior:'smooth'}); handleBulk(made); };
+  await writeLog(`${set}_${BROWSER}_${batch}_00_SUMMARY.json`,JSON.stringify(summary,null,1));
+  $('simProg').textContent=stop?'stopped':`done — ${summary.runs.length} runs, logs: ${dir?dir.name:'Downloads'}`;
+};
 })();
 </script>
 
