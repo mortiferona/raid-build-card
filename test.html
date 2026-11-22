@@ -164,9 +164,8 @@ input[type=file]{display:none}
   <div class="sg">
     <section class="sc">
       <h3><span>1</span> Screenshots</h3>
-      <label class="fl">Set name<input id="simSet" value="Titus"></label>
-      <label class="btn alt">Choose screenshots<input type="file" id="simIn" accept="image/*" multiple hidden></label>
-      <div id="simCount" class="note">No set loaded</div>
+      <div class="note" style="opacity:.9">Load your screenshots the usual way — in the gold box of the reader below. The test uses the set you loaded last.</div>
+      <div id="simCount" class="big0">No set loaded yet</div>
     </section>
 
     <section class="sc wide">
@@ -174,7 +173,7 @@ input[type=file]{display:none}
       <div class="grp"><div class="gl">Screen size <a data-all="simRes">all</a> · <a data-none="simRes">none</a></div><div id="simRes" class="chips"></div></div>
       <div class="grp"><div class="gl">Taken as</div><div id="simMode" class="chips"></div></div>
       <div class="grp"><div class="gl">File type</div><div id="simFmt" class="chips"></div></div>
-      <div class="note">Only 16:9 screens can be simulated. Other shapes (16:10, 4:3, ultrawide) make the game rearrange its layout — those need real screenshots.</div>
+      <div class="note">Nothing ticked = all screen sizes, full screen, PNG. Tick to narrow it down. Only 16:9 screens can be simulated. Other shapes (16:10, 4:3, ultrawide) make the game rearrange its layout — those need real screenshots.</div>
     </section>
 
     <section class="sc">
@@ -187,6 +186,7 @@ input[type=file]{display:none}
     </section>
   </div>
 
+  <div id="simGal" class="gal"></div>
   <table id="simTab"></table>
 </div>
 <style>
@@ -221,6 +221,17 @@ input[type=file]{display:none}
 #sim th{background:#2a2010;color:#ffdd85;font-weight:600;text-align:left;padding:8px 10px}
 #sim td{padding:8px 10px;border-top:1px solid #33280f;vertical-align:top}
 #sim tr:nth-child(even) td{background:#1a140a}
+#sim .big0{font-size:15px;font-weight:700;color:#ffdd85}
+#sim .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
+#sim .gal:empty{display:none}
+#sim .gal figure{margin:0;background:#221a0c;border:2px solid #3d3016;border-radius:12px;overflow:hidden}
+#sim .gal figure.ok{border-color:#3fa34d}
+#sim .gal figure.warn{border-color:#d4a017}
+#sim .gal figure.bad{border-color:#e0453a;box-shadow:0 0 0 3px #e0453a44}
+#sim .gal figure.bad figcaption b{color:#ff8a7a}
+#sim .gal img{display:block;width:100%;cursor:zoom-in;background:#0b0f16}
+#sim .gal figcaption{padding:8px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+#sim .gal figcaption b{color:#ffdd85;font-size:13px}
 #sim .ok{color:#7ddc85}#sim .bad{color:#ff8a7a}#sim .warn{color:#ffd166}
 @media(max-width:980px){#sim .sg{grid-template-columns:1fr}}
 </style>
@@ -244,7 +255,9 @@ const picked=h=>[...$(h).querySelectorAll('input:checked')].map(i=>i.value);
 let files=[], dir=null, stop=false, baseline={};
 const errs=[]; window.addEventListener('error',e=>errs.push(String(e.message||e))); window.addEventListener('unhandledrejection',e=>errs.push(String(e.reason)));
 $('simBrowser').textContent=BROWSER+' '+BVER.split('.')[0]; $('simBrowser').title='Open this same address in Edge / Opera / Chrome to test each browser';
-$('simIn').onchange=()=>{ files=[...$('simIn').files]; $('simCount').textContent=`${files.length} screenshots loaded`; $('simCount').style.opacity=1; baseline={}; };
+let feeding=false;
+window.addEventListener('load',()=>{ const _hb=window.handleBulk;               // the reader's own function is defined later on the page
+  window.handleBulk=f=>{ if(!feeding){ files=[...f]; baseline={}; $('simCount').textContent=`${files.length} screenshots loaded`; } return _hb(f); }; wrapNormalize(); });
 $('simDir').onclick=async()=>{ try{ dir=await window.showDirectoryPicker({id:'cardslogs',mode:'readwrite',startIn:'downloads'}); $('simDirName').textContent='Logs → '+dir.name; }catch(e){ $('simDirName').textContent='No folder chosen — logs go to Downloads'; } };
 $('simStop').onclick=()=>{ stop=true; };
 
@@ -281,11 +294,22 @@ function snapshot(){
     relic:Object.fromEntries(Object.entries(relic).filter(([k,v])=>!(typeof v==='string'&&v.startsWith('data:')))),bless:{name:bless.name},masteries:$('mCnt').innerText.replace(/\n/g,' '),
     hero:{name:hero.name,stars:hero.stars},champ:{...champ,portrait:!!champ.portrait},bulkLog:$('blog').innerText.split('\n')};
 }
-const SKIP=new Set(['bulkLog','badge','img','sets','icon','portrait']);           // pictures are not compared
+const SKIP=new Set(['bulkLog','badge','img','sets','icon','portrait','flagged']);   // pictures and "to check" marks are not compared
+const norm=v=>typeof v==='string'?v.toLowerCase().replace(/[^a-z0-9%+]/g,''):v;      // "[Veil]" and "|Veil]" are the same text
 const short=v=>{ const t=JSON.stringify(v); return t&&t.length>90?t.slice(0,87)+'…"':t; };
 function compare(a,b,path='',out=[]){
-  if(a===b)return out; if(typeof a!==typeof b||a===null||b===null||typeof a!=='object'){ out.push(`${path}: expected ${short(a)} got ${short(b)}`); return out; }
+  if(a===b||(typeof a==='string'&&typeof b==='string'&&norm(a)===norm(b)))return out; if(typeof a!==typeof b||a===null||b===null||typeof a!=='object'){ out.push(`${path}: expected ${short(a)} got ${short(b)}`); return out; }
   const keys=new Set([...Object.keys(a),...Object.keys(b)]); for(const k of keys){ if(SKIP.has(k))continue; compare(a[k],b[k],path?path+'.'+k:k,out); } return out;
+}
+async function cardImage(){
+  try{ const host=document.createElement('div'); host.style.cssText='position:fixed;left:-30000px;top:0'; host.innerHTML=buildCard(); document.body.appendChild(host);
+    await document.fonts.ready; const c=host.querySelector('#card')||host.firstElementChild;
+    const cv=await html2canvas(c,{backgroundColor:'#0b0f16',scale:1,useCORS:true}); host.remove();
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png')); return {blob,url:URL.createObjectURL(blob)}; }catch(e){ errs.push('card: '+e); return null; }
+}
+async function writeBlob(name,blob){
+  if(dir){ try{ const fh=await dir.getFileHandle(name,{create:true}); const w=await fh.createWritable(); await w.write(blob); await w.close(); return; }catch(e){ errs.push('png write: '+e); } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Cards_Logs_'+name; a.click();
 }
 async function writeLog(name,text){
   if(dir){ try{ const fh=await dir.getFileHandle(name,{create:true}); const w=await fh.createWritable(); await w.write(text); await w.close(); return 'folder'; }catch(e){ errs.push('log write: '+e); } }
@@ -293,10 +317,10 @@ async function writeLog(name,text){
 }
 const stamp=()=>new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
 $('simRun').onclick=async()=>{
-  if(!files.length){alert('Pick a set of screenshots first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
-  wrapNormalize(); stop=false; const set=($('simSet').value||'set').replace(/[^\w-]/g,'_'), batch=stamp();
+  if(!files.length){alert('Load your screenshots in the gold box of the reader first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
+  stop=false; let set='set'; const batch=stamp(); $('simGal').innerHTML='';
   let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt');
-  if(!res.length){alert('Tick at least one screen size');return;}
+  if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
   if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
   const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
@@ -305,13 +329,17 @@ $('simRun').onclick=async()=>{
   for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
     $('simProg').textContent=`Running ${i+1} of ${combos.length}: ${r} · ${m} · ${f}`; $('simBar').style.width=(i/combos.length*100)+'%';
     resetAll(); for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k]; diag=[]; errs.length=0;
-    const set_=await makeSet(r,m,f); handleBulk(set_); const ms=await waitDone(); if(stop)break;
-    const snap=snapshot(); if(r==='orig')baseline[set]=snap;
-    const diffs=baseline[set]&&r!=='orig'?compare(baseline[set],snap):[];
+    const set_=await makeSet(r,m,f); feeding=true; handleBulk(set_); feeding=false; const ms=await waitDone(); if(stop)break;
+    const snap=snapshot(); if(set==='set'&&snap.hero.name)set=snap.hero.name.replace(/[^\w-]+/g,'_'); if(r==='orig')baseline.ref=snap;
+    const cardPng=await cardImage();
+    const diffs=baseline.ref&&r!=='orig'?compare(baseline.ref,snap):[];
     const recog=snap.bulkLog.filter(l=>/^✓/.test(l)).length, fails=snap.bulkLog.filter(l=>/^✗/.test(l));
     const flagged=Object.entries(snap.slots).filter(([,s])=>s.flagged.length).map(([k,s])=>`${k}(${s.flagged.length})`);
     const rec={browser:BROWSER+' '+BVER,screen:r,mode:m,format:f,timeMs:ms,recognised:`${recog}/${set_.length}`,failed:fails,flagged,differences:diffs,errors:errs.slice(),diagnostics:diag,files:set_.map(x=>x.name),result:snap};
     const fname=`${set}_${BROWSER}_${batch}_${String(i+1).padStart(2,'0')}_${r}_${m}_${f}.json`; const where=await writeLog(fname,JSON.stringify(rec,null,1));
+    if(cardPng){ await writeBlob(fname.replace(/\.json$/,'_card.png'),cardPng.blob);
+      const cls2=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
+      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
     const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
     $('simTab').insertAdjacentHTML('beforeend',`<tr><td>${r}</td><td>${m}</td><td>${f}</td><td class="${fails.length?'bad':'ok'}">${rec.recognised}${fails.length?'<br>'+fails.map(x=>x.replace(/</g,'&lt;')).join('<br>'):''}</td><td class="${flagged.length?'warn':'ok'}">${flagged.join(', ')||'none'}</td><td class="${cls}">${r==='orig'?'(reference)':(diffs.length?diffs.slice(0,8).join('<br>')+(diffs.length>8?`<br>… ${diffs.length-8} more in the log`:''):'none')}</td><td>${(ms/1000).toFixed(0)} s</td></tr>`);
