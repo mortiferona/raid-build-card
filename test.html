@@ -173,7 +173,7 @@ input[type=file]{display:none}
       <div class="grp"><div class="gl">Screen size <a data-all="simRes">all</a> · <a data-none="simRes">none</a></div><div id="simRes" class="chips"></div></div>
       <div class="grp"><div class="gl">Taken as</div><div id="simMode" class="chips"></div></div>
       <div class="grp"><div class="gl">File type</div><div id="simFmt" class="chips"></div></div>
-      <div class="note">Nothing ticked = all screen sizes and shapes (16:9, 16:10, 4:3, 5:4, 21:9, 32:9), both stretched and with black bars, PNG. Tick to narrow it down.</div>
+      <div class="note">Nothing ticked = all screen widths, same picture resized, PNG. Each screenshot keeps its own shape and is only made smaller (bigger screens need real screenshots), so the test is never harder or easier than reality. Use “window” and “smaller window” only with full-screen screenshots — a screenshot that already shows a window would get a second one around it.</div>
     </section>
 
     <section class="sc">
@@ -240,16 +240,15 @@ input[type=file]{display:none}
 const SIM_VERSION='test-1';
 const UA=navigator.userAgent, BROWSER=/Edg\//.test(UA)?'Edge':/OPR\//.test(UA)?'Opera':/Firefox\//.test(UA)?'Firefox':/Chrome\//.test(UA)?'Chrome':'Other';
 const BVER=(UA.match(/(?:Edg|OPR|Firefox|Chrome)\/([\d.]+)/)||['',''])[1];
-const RES=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3200x1800','3840x2160',
-  '1680x1050','1920x1200','2560x1600','1024x768','1600x1200','1280x1024','2560x1080','3440x1440','3840x1080'];
-const RATIO=r=>{ if(r==='orig')return ''; const [w,h]=r.split('x').map(Number),a=w/h; return Math.abs(a-16/9)<.01?'16:9':Math.abs(a-1.6)<.01?'16:10':Math.abs(a-4/3)<.01?'4:3':Math.abs(a-1.25)<.01?'5:4':a>3?'32:9':'21:9'; };
-const RES_ON=['orig','1280x720','1366x768','1536x864','1600x900','1920x1080','2560x1440','3840x2160'];
-const MODES=[['full','Full screen (stretched)'],['bars','Full screen, black bars'],['win','Window + taskbar'],['small','Smaller window on desktop']];
+// screen widths: every screenshot keeps its own shape (a 16:10 window stays 16:10) — only what a real screen can produce
+const RES=['orig','1280','1366','1536','1600','1920','2560','3200','3840'];
+const RATIO=r=>'';
+const MODES=[['full','Same picture, resized'],['win','Window + taskbar'],['small','Smaller window on desktop']];
 const FMTS=[['png','PNG'],['jpg','JPG 75%'],['webp','WebP 70% (Discord)']];
 const $=id=>document.getElementById(id);
 const box=(host,items,on)=>{ $(host).innerHTML=items.map(([v,t])=>`<label class="chip${on.includes(v)?' on':''}"><input type="checkbox" value="${v}" ${on.includes(v)?'checked':''}>${t}</label>`).join('');
   $(host).querySelectorAll('input').forEach(i=>i.onchange=()=>i.parentNode.classList.toggle('on',i.checked)); };
-box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r.replace('x','×')+' <small>'+RATIO(r)+'</small>']),[]);
+box('simRes',RES.map(r=>[r,r==='orig'?'Original (reference)':r+' wide']),[]);
 document.querySelectorAll('#sim [data-all],#sim [data-none]').forEach(a=>a.onclick=()=>{ const on=!!a.dataset.all; document.querySelectorAll('#'+(a.dataset.all||a.dataset.none)+' input').forEach(i=>{i.checked=on;i.parentNode.classList.toggle('on',on);}); });
 box('simMode',MODES,[]); box('simFmt',FMTS,[]);
 const picked=h=>[...$(h).querySelectorAll('input:checked')].map(i=>i.value);
@@ -264,22 +263,23 @@ $('simDir').onclick=async()=>{ try{ dir=await window.showDirectoryPicker({id:'ca
 $('simStop').onclick=()=>{ stop=true; };
 
 const load=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});
-function render(img,SW,SH,mode){
-  const c=document.createElement('canvas'),g=c.getContext('2d'); g.imageSmoothingQuality='high'; c.width=SW; c.height=SH;
-  if(mode==='full'){ g.drawImage(img,0,0,SW,SH); return c; }
-  if(mode==='bars'){ g.fillStyle='#000'; g.fillRect(0,0,SW,SH); const k=Math.min(SW/img.width,SH/img.height),w=Math.round(img.width*k),h=Math.round(img.height*k);
-    g.drawImage(img,Math.round((SW-w)/2),Math.round((SH-h)/2),w,h); return c; }
-  const dpi=SH/1080, bg=g.createLinearGradient(0,0,SW,SH); bg.addColorStop(0,'#1d3557'); bg.addColorStop(1,'#457b9d'); g.fillStyle=bg; g.fillRect(0,0,SW,SH);
-  const tb=Math.round(31*dpi), task=Math.round(48*dpi); let gh,gw,x,y;
-  if(mode==='win'){ gh=SH-tb-task; gw=Math.round(gh*16/9); x=Math.round((SW-gw)/2); y=tb; }
-  else { gw=Math.round(SW*0.72); gh=Math.round(gw*9/16); x=Math.round(SW*0.09); y=Math.round(SH*0.12); }
-  g.fillStyle='#f3f3f3'; g.fillRect(x,y-tb,gw,tb); g.fillStyle='#222'; g.font=Math.round(15*dpi)+'px Segoe UI,sans-serif'; g.fillText('Raid: Shadow Legends',x+Math.round(10*dpi),y-Math.round(10*dpi));
-  g.drawImage(img,x,y,gw,gh); g.fillStyle='#dfe6ee'; g.fillRect(0,SH-task,SW,task); return c;
+function render(img,SW,mode){
+  // the screenshot is scaled as a whole — never stretched: a real screen of another size shows the same picture bigger or smaller
+  const k=SW/img.width, w=SW, h=Math.round(img.height*k), dpi=h/1080;
+  const c=document.createElement('canvas'),g=c.getContext('2d'); g.imageSmoothingQuality='high';
+  if(mode==='full'){ c.width=w; c.height=h; g.drawImage(img,0,0,w,h); return c; }
+  const tb=Math.round(31*dpi), task=Math.round(48*dpi);
+  if(mode==='win'){ c.width=w; c.height=h+tb+task; }                                   // maximised window: title bar above, taskbar below
+  else { c.width=Math.round(w/0.72); c.height=Math.round((h+tb)/0.72); }              // smaller window on a bigger desktop
+  const bg=g.createLinearGradient(0,0,c.width,c.height); bg.addColorStop(0,'#1d3557'); bg.addColorStop(1,'#457b9d'); g.fillStyle=bg; g.fillRect(0,0,c.width,c.height);
+  const x=mode==='win'?0:Math.round(c.width*0.09), y=mode==='win'?tb:Math.round(c.height*0.12);
+  g.fillStyle='#f3f3f3'; g.fillRect(x,y-tb,w,tb); g.fillStyle='#222'; g.font=Math.round(15*dpi)+'px Segoe UI,sans-serif'; g.fillText('Raid: Shadow Legends',x+Math.round(10*dpi),y-Math.round(10*dpi));
+  g.drawImage(img,x,y,w,h); if(mode==='win'){ g.fillStyle='#dfe6ee'; g.fillRect(0,c.height-task,c.width,task); } return c;
 }
 async function makeSet(res,mode,fmt){
   if(res==='orig') return files.slice();
-  const [SW,SH]=res.split('x').map(Number), type={png:'image/png',jpg:'image/jpeg',webp:'image/webp'}[fmt], q={png:1,jpg:.75,webp:.7}[fmt], out=[];
-  for(const f of files){ const c=render(await load(f),SW,SH,mode); const b=await new Promise(r=>c.toBlob(r,type,q)); out.push(new File([b],f.name.replace(/\.\w+$/,'')+`_${res}_${mode}.${fmt}`,{type})); }
+  const SW=+res, type={png:'image/png',jpg:'image/jpeg',webp:'image/webp'}[fmt], q={png:1,jpg:.75,webp:.7}[fmt], out=[];
+  for(const f of files){ const c=render(await load(f),SW,mode); const b=await new Promise(r=>c.toBlob(r,type,q)); out.push(new File([b],f.name.replace(/\.\w+$/,'')+`_${res}_${mode}.${fmt}`,{type})); }
   return out;
 }
 // what the reader did with every screenshot (kind, scale, offsets, anchors)
@@ -287,6 +287,13 @@ let diag=[], wrapped=false;
 function wrapNormalize(){ if(wrapped)return; wrapped=true; const _an=window.autoNormalize;      // the reader's own function is defined later on the page
 window.autoNormalize=async img=>{ const r=await _an(img); const F=r.fit||{}; diag.push({w:img.naturalWidth,h:img.naturalHeight,kind:r.kind,s:F.s&&+F.s.toFixed(4),y0:F.y0&&+F.y0.toFixed(1),y0B:F.y0B&&+F.y0B.toFixed(1),off:F.off&&Object.fromEntries(Object.entries(F.off).map(([k,v])=>[k,+v.toFixed(1)])),pop:F.pop&&{s:+F.pop.s.toFixed(4),T:F.pop.T,L:+F.pop.L.toFixed(1)},anchor:F.rmap&&{s:+F.rmap.s.toFixed(4),ax:+F.rmap.ax.toFixed(1),ay:+F.rmap.ay.toFixed(1)}}); return r; }; }
 const waitDone=()=>new Promise(res=>{ const t0=Date.now(); const iv=setInterval(()=>{ const st=$('status').textContent; if((!queue.length&&!busy&&/^Done/.test(st))||Date.now()-t0>600000||stop){clearInterval(iv);res(Date.now()-t0);} },500); });
+async function fp(src){ if(!src)return null; try{ const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+  const c=document.createElement('canvas'); c.width=c.height=12; const g=c.getContext('2d'); g.drawImage(im,0,0,12,12); const d=g.getImageData(0,0,12,12).data, o=[];
+  for(let k=0;k<d.length;k+=4)o.push(Math.round(d[k]*.3+d[k+1]*.59+d[k+2]*.11)); return o; }catch(e){ return null; } }
+async function pictures(){ const P={};
+  for(const e of document.querySelectorAll('.slot.filled')){ const im=e.querySelector('.thumb img'); P['icon '+e.dataset.slot]=await fp(im&&im.src); }
+  P['relic picture']=await fp(relic.img); P['blessing picture']=await fp(bless.img); P['portrait']=await fp(champ.portrait); return P; }
+const picDiff=(a,b)=>{ if(!a||!b)return a===b?0:255; let s=0; for(let i=0;i<a.length;i++)s+=Math.abs(a[i]-b[i]); return s/a.length; };
 function snapshot(){
   const v=(e,c)=>{const n=e.querySelector(c);return n?n.value:'';};
   const slots={}; document.querySelectorAll('.slot').forEach(e=>{ if(!e.classList.contains('filled'))return; const k=e.dataset.slot;
@@ -298,7 +305,7 @@ function snapshot(){
     relic:Object.fromEntries(Object.entries(relic).filter(([k,v])=>!(typeof v==='string'&&v.startsWith('data:')))),bless:{name:bless.name},masteries:$('mCnt').innerText.replace(/\n/g,' '),
     hero:{name:hero.name,stars:hero.stars},champ:{...champ,portrait:!!champ.portrait},bulkLog:$('blog').innerText.split('\n')};
 }
-const SKIP=new Set(['bulkLog','badge','img','sets','icon','portrait','flagged']);   // pictures and "to check" marks are not compared
+const SKIP=new Set(['bulkLog','badge','img','sets','icon','portrait','flagged','pics']);   // pictures and "to check" marks are not compared
 const norm=v=>typeof v==='string'?v.toLowerCase().replace(/[^a-z0-9%+]/g,''):v;      // "[Veil]" and "|Veil]" are the same text
 const short=v=>{ const t=JSON.stringify(v); return t&&t.length>90?t.slice(0,87)+'…"':t; };
 function compare(a,b,path='',out=[]){
@@ -324,19 +331,21 @@ $('simRun').onclick=async()=>{
   if(!files.length){alert('Load your screenshots in the gold box of the reader first');return;} if(typeof handleBulk!=='function'||!worker){alert('Reader not ready yet');return;}
   stop=false; let set='set'; const batch=stamp(); $('simGal').innerHTML='';
   let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt');
-  if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full','bars']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
+  if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
   if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
-  const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>{ if(m==='bars'&&RATIO(r)==='16:9')return; fmts.forEach(f=>combos.push([r,m,f])); }));   // black bars on a 16:9 screen = same as full
+  const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); const srcW=(await load(files[0])).width;   // only smaller screens: blowing a picture up only blurs it, a real bigger screen is sharp
+  res.filter(r=>r!=='orig'&&+r<=srcW).forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));   // black bars on a 16:9 screen = same as full
   $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
   const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
   for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
     $('simProg').textContent=`Running ${i+1} of ${combos.length}: ${r} · ${m} · ${f}`; $('simBar').style.width=(i/combos.length*100)+'%';
     resetAll(); for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k]; diag=[]; errs.length=0;
     const set_=await makeSet(r,m,f); feeding=true; handleBulk(set_); feeding=false; const ms=await waitDone(); if(stop)break;
-    const snap=snapshot(); if(set==='set'&&snap.hero.name)set=snap.hero.name.replace(/[^\w-]+/g,'_'); if(r==='orig')baseline.ref=snap;
+    const snap=snapshot(); snap.pics=await pictures(); if(set==='set'&&snap.hero.name)set=snap.hero.name.replace(/[^\w-]+/g,'_'); if(r==='orig')baseline.ref=snap;
     const cardPng=await cardImage();
     const diffs=baseline.ref&&r!=='orig'?compare(baseline.ref,snap):[];
+    if(baseline.ref&&r!=='orig') for(const k in baseline.ref.pics){ const d=picDiff(baseline.ref.pics[k],snap.pics[k]); if(d>28)diffs.push(`${k}: picture differs from the original (${Math.round(d)})`); }
     const recog=snap.bulkLog.filter(l=>/^✓/.test(l)).length, fails=snap.bulkLog.filter(l=>/^✗/.test(l));
     const flagged=Object.entries(snap.slots).filter(([,s])=>s.flagged.length).map(([k,s])=>`${k}(${s.flagged.length})`);
     const rec={browser:BROWSER+' '+BVER,screen:r,mode:m,format:f,timeMs:ms,recognised:`${recog}/${set_.length}`,failed:fails,flagged,differences:diffs,errors:errs.slice(),diagnostics:diag,files:set_.map(x=>x.name),result:snap};
@@ -347,7 +356,7 @@ $('simRun').onclick=async()=>{
         if(/^relic\./.test(d)&&snap.relic&&snap.relic.doubt)return false;                                     // relic marked "to check"
         const m=d.match(/^slots\.(\w+)/); const fl=o=>o&&o.slots[m[1]]&&o.slots[m[1]].flagged.length; return !(m&&(fl(snap)||fl(baseline.ref))); });   // marked as doubtful here or in the original: not silent
       const cls2=fails.length||silent.length?'bad':(flagged.length||diffs.length?'warn':'ok');
-      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' ('+RATIO(r)+') · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
+      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r+' wide · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
     const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
     $('simTab').insertAdjacentHTML('beforeend',`<tr><td>${r}</td><td>${m}</td><td>${f}</td><td class="${fails.length?'bad':'ok'}">${rec.recognised}${fails.length?'<br>'+fails.map(x=>x.replace(/</g,'&lt;')).join('<br>'):''}</td><td class="${flagged.length?'warn':'ok'}">${flagged.join(', ')||'none'}</td><td class="${cls}">${r==='orig'?'(reference)':(diffs.length?diffs.slice(0,8).join('<br>')+(diffs.length>8?`<br>… ${diffs.length-8} more in the log`:''):'none')}</td><td>${(ms/1000).toFixed(0)} s</td></tr>`);
@@ -469,6 +478,14 @@ function emptySlot(el){
   el.querySelector('.thumb img').removeAttribute('src'); el.querySelector('.raw').textContent='';
   el._hero=null; el.classList.remove('filled'); delete state[el.dataset.slot]; badge(el,'','empty');
 }
+// every screenshot shows the champion's name and stars in its header: take what most of them agree on, not just the first
+const HVOTES=[];
+function voteHero(name,lvl,stars,from){
+  if(name)HVOTES.push({name,lvl,stars,from});
+  const tally=(f)=>{ const c={}; HVOTES.forEach(v=>{ const k=v[f]; if(k)c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; };
+  const n=tally('name'), st=tally('stars'), lv=tally('lvl'); if(!n)return;
+  if(n[0]!==hero.name||(st&&+st[0]!==hero.stars)) setHero({name:n[0],lvl:lv?lv[0]:hero.lvl,stars:st?+st[0]:hero.stars},from);
+}
 function setHero(h,from){
   Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,from}:{name:'',lvl:'',stars:0,from:''});
   document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
@@ -484,7 +501,7 @@ function clearSlot(el){
 }
 function resetAll(){
   clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
-  queue.length=0;
+  queue.length=0; HVOTES.length=0;
   for(const k in state)delete state[k];
   setHero(null,'');
   document.querySelectorAll('.slot').forEach(el=>{emptySlot(el);el.classList.remove('active');});
@@ -740,14 +757,26 @@ async function autoNormalize(img){
       // two independent scales must agree: the landmarks' and the whole screen's (when the screen was found)
       // ... and so must the two positions (the panel sits at the right edge, near the top). When they disagree, the screen
       // itself is the third judge: a game filling the picture has scale = height/1080 and its right edge at the picture's edge
-      const W_=img.naturalWidth,G={s:img.naturalHeight/1080}; G.ax=W_-1920*G.s;
-      const dist=(s_,ay,ax)=>Math.abs(s_-G.s)/G.s*100+Math.abs(ay)/G.s/8+Math.abs(ax-G.ax)/G.s/8;
+      // the item windows of the same batch tell where the game is and how big (exact even when the game is a small window on
+      // a desktop); without them, assume the game fills the picture
+      const W_=img.naturalWidth, PB=POPS[img.naturalWidth+'x'+img.naturalHeight];
+      const G=PB&&PB.batch?{s:PB.s,ay:PB.T,ax:null}:{s:img.naturalHeight/1080,ay:0,ax:W_-1920*img.naturalHeight/1080};
+      const dist=(s_,ay,ax)=>Math.abs(s_-G.s)/G.s*100+Math.abs(ay-G.ay)/G.s/8+(G.ax===null?0:Math.abs(ax-G.ax)/G.s/8);
       const fitAx=best&&best.off&&best.off.R!==undefined?best.off.R-1920*best.s:null;
       const disagree=ra&&best&&best.n>=3&&(Math.abs(ra.s-best.s)>best.s*0.05||Math.abs(ra.ay-best.y0)>8*best.s||(fitAx!==null&&Math.abs(ra.ax-fitAx)>8*best.s));
       if(disagree&&dist(ra.s,ra.ay,ra.ax)>dist(best.s,best.y0,fitAx===null?G.ax:fitAx)){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
       if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
         return {img:out,kind,fit:F}; } } }
-  if(!best||best.n<3)return {img,kind:null};
+  if(!best||best.n<3){
+    // the Masteries screen has almost no words to find it by; on a small screen even those can be missed. The item windows
+    // of the same batch tell exactly where the game is — if the mastery trees sit there with lit nodes, it is the Masteries screen
+    const PB=POPS[img.naturalWidth+'x'+img.naturalHeight];
+    if(PB&&PB.batch){ const C=PB.L<5*PB.s?img.naturalWidth/2:PB.L+960*PB.s;   // game touching the left edge fills the width (its window can be wider than 16:9)
+      const F={s:PB.s,y0:PB.T,y0B:PB.T,off:{L:C-960*PB.s,C,R:C+960*PB.s},n:0};
+      const cand=await drawNormalized(img,'masteries',F), cnt=countMasteries(cand), tot=cnt.reduce((a,c)=>a+c[1],0), tr=cnt.filter(c=>c[1]>0).length;
+      if(tot>=3&&tot<=15&&tr<=2){ cand._kind='masteries'; return {img:cand,kind:'masteries',fit:F}; } }
+    return {img,kind:null};
+  }
   const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
   if(plain)return {img,kind:bk};
   return {img:await drawNormalized(img,bk,best),kind:bk,fit:best};
@@ -929,10 +958,15 @@ const MROWS=[249,395,541,687,833,979];
 const mast={img:null,counts:null};
 function countMasteries(img){
   const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
-  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
-  return MTREES.map(([name,,xs])=>{let lit=0;MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{if(ri===0&&(ci===0||ci===3))return;
-    let n=0,t=0;for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){const k=(Math.round((y+dy)*s)*W+Math.round((x+dx)*s))*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;}
-    if(n/t>0.12)lit++;}));return [name,lit];});   // lit nodes measure 24–49 %, dark ones ~0 %
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,H=c.height,d=g.getImageData(0,0,c.width,c.height).data;
+  const lit=(x,y)=>{ let n=0,t=0; for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){ const X=Math.round((x+dx)*s),Y=Math.round((y+dy)*s); if(X<0||Y<0||X>=W||Y>=H){t++;continue;}
+      const k=(Y*W+X)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;} return n/t; };
+  // the node grid may sit a little off (small screens, a rough fit): slide it until the nodes line up best — lit nodes then
+  // show 24–49 % colour and dark ones ~0 %, and the grid that gives the clearest split is the right one
+  return MTREES.map(([name,,xs])=>{ let best=null;
+    for(let ox=-30;ox<=30;ox+=6)for(let oy=-30;oy<=30;oy+=6){ const v=[]; MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{ if(ri===0&&(ci===0||ci===3))return; v.push(lit(x+ox,y+oy)); }));
+      const score=v.reduce((a,b)=>a+(b>0.12?b:-b),0); if(!best||score>best.score)best={score,v}; }
+    return [name,best.v.filter(x=>x>0.12).length]; });
 }
 function processMasteries(img){
   const counts=countMasteries(img); let use=counts.filter(c=>c[1]>0).map(c=>c[0]); if(!use.length)use=['Offense','Defense'];
@@ -943,7 +977,9 @@ function processMasteries(img){
   document.getElementById('mDrop').style.display='none'; document.getElementById('mErr').style.display='none';
   document.getElementById('mView').style.display='flex'; document.getElementById('mImg').src=mast.img;
   document.getElementById('mCnt').innerHTML=counts.map(([n,v])=>`${n}: <b>${v}</b>`).join('<br>');
-  setBadgeId('mBadge','ok','read ✓'); document.getElementById('mpanel').classList.add('filled');
+  // game rules: masteries use at most 2 trees and at most 15 picks — anything else is a misread
+  const tot=counts.reduce((a,c)=>a+c[1],0), trees2=counts.filter(c=>c[1]>0).length, mBad=tot>15||trees2>2;
+  setBadgeId('mBadge',mBad?'warn':'ok',mBad?'counts to check':'read ✓'); mast.doubt=mBad; document.getElementById('mpanel').classList.add('filled');
 }
 function setBadgeId(id,c,t){const b=document.getElementById(id);b.className='badge '+c;b.textContent=t;}
 function clearMasteries(){mast.img=null;mast.counts=null;const p=document.getElementById('mpanel');p.classList.remove('filled');
@@ -985,6 +1021,29 @@ function affinityByColor(px){ // the icon sits just left of the champion name; t
   for(let x=x0;x<x0+40;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
     if(r>130&&b>130&&g<100)c.Void++; else if(b>r+40&&b>g)c.Magic++; else if(r>g+60&&r>b+60)c.Force++; else if(g>r+40&&g>b)c.Spirit++;}
   const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>12?best[0]:''; }
+// names in the game are a closed list: a misread name is put right only when exactly one known name is clearly closest
+const RELICS=['Volcardiac Heart','Hallowed Hilt','Aspect of Siroth','Wand of Submission','Gilded Dragonstone','Demonic Effigy','Golden Elixir','Unholy Grail','Mask of Rage','Journal of Necrotos','Rod of Blasphemy',
+ 'Stormcaller','Chronocube','Gorecrescent','Hand of Uncreation','Scroll of the Unseen','Orb of Transfixion','Irethi Coronet','Malefic Talon','Diadem of Undeath','Tempus Sanguinis','Molten Deathbell',
+ 'Murderfang','Chrysalid of Rebirth','Essence Quencher','Temporal Stagnator','Infernosphere',"Valkanen's Grasp",'The Fleshrender','Blackshroud Fan',
+ 'Infernal Polytope','The Deathdealer','Harp of Kasbiel','Ax Serpentis','Preserved Aberration','Moondeath Orchid','Royal Digit','Draught of Ire',
+ "The Cat's Gaze","Hatter's Reserve",'Covetous Passion','Crown of Corruption','Skull of Treason','Gilded Pinion','Grail of Agony','Gaze of Damnation','Tempus Morbidia',"Sinner's Cloak",
+ 'Stars of the Jiinang',"Xibia's Servitude",'Last Laugh Amulet','Mask of Disquiet',"Exuzar's Totem","Saint Zavier's Tribute",'Thunderous Circlet','Jaws of Hatred',
+ 'Diabolical Dice','The Towerhelm','Thunderbolt Spear','Okulos Kustodion','Howling Guardians',"Darksmile's Toast",'Vigor Mortis','Sigil of the Akar',
+ 'Torch of Thralldom','Mind of Marquat','Eternal Soulgaol','The Collective','Hammer of Ending','Perched Shadow','Arachnelixir','Codex Luminis',
+ 'Lens of Intangibility','Coronet of Gloom','Soulmar Crystal','Sporeburst Rod','Compass of Anaxia','Revolting Seedling','Steel-Eyed Cutter',"Hoarder's Cauldron",
+ 'Dreadbomb','Immortal Visage','Bane of Sintranos','Blades of Akumori',"The Exile's Crown","Andromeda's Diadem",'Pyros Malleos','Frostspawn Cocoon',
+ 'Lifespring Skull','Sempiternal Anchor','Bloatshield Totem','Gauntlet of Ruin','Fleshmelter Lash','Sibilant Gold'];
+const BLESSINGS=['Indomitable Spirit','Miracle Heal','Iron Will','Heavencast','Intimidating Presence','Lightning Cage','Dark Resolve','Phantom Touch','Cruelty','Lethal Dose','Temporal Chains','Ward of the Fallen',
+ "Hero's Soul",'Faultless Defense','Commanding Presence','Inspiring Presence','Chainbreaker','Life Harvest','Soul Reap','Emergency Heal','Survival Instinct','Crushing Rend','Incinerate','Brimstone','Polymorph','Carapace',
+ "Nature's Wrath",'Harmonic Impulse',"Nature's Bounty",'Nourish','Neutralize','Cracking Roots'];
+const SETS=['Life','Offense','Defense','Speed','Critical Rate','Critical Damage','Accuracy','Resistance','Lifesteal','Fury','Daze','Cursed','Frost','Frenzy','Regeneration','Immunity','Shield','Relentless','Savage',
+ 'Destroy','Stun','Toxic','Taunting','Retaliation','Avenging','Stalwart','Reflex','Curing','Cruel','Immortal','Divine Offense','Divine Critical Rate','Divine Life','Divine Speed','Swift Parry','Deflection',
+ 'Resilience','Perception','Affinitybreaker','Untouchable','Fatal','Frostbite','Bloodthirst','Guardian','Fortitude','Lethal','Protection','Stone Skin','Killstroke','Instinct','Bolster','Defiant','Impulse',
+ 'Zeal','Righteous','Supersonic','Merciless','Slayer','Feral','Pinpoint','Stonecleaver','Rebirth','Chronophage','Mercurial','Refresh','Cleansing','Bloodshield','Reaction','Revenge'];
+// returns the known name, or null when nothing is close enough or two names are equally close (then: ask to check)
+function snapName(t,LIST){ if(!t)return null; const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), a=L(t); if(a.length<3)return null;
+  let best=null,bd=99,second=99; for(const n of LIST){ const d=lev(a,L(n)); if(d<bd){second=bd;bd=d;best=n;} else if(d<second)second=d; }
+  const tol=Math.max(1,Math.round(L(best).length*0.3)); return bd<=tol&&second>bd?best:null; }
 const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
 function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
@@ -1005,7 +1064,12 @@ async function readChampDetails(img){
   Object.assign(champ,{role:/^(Attack|Defense|Support|HP)$/i.test(role)?role:champ.role||'',faction:fac||champ.faction||'',rarity:rar||champ.rarity||'',affinity:aff||champ.affinity||'',portrait:portrait||champ.portrait||''});
 }
 function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
-  if(top===null)return 0; let runs=0,prev=false; for(let x=x0;x<x1;x++){let on=false;for(let y=top;y<top+4;y++){const [r,g,b]=px(x,y);if(r>200&&g>140&&b<100){on=true;break;}} if(on&&!prev)runs++;prev=on;} return Math.min(runs,6);}
+  if(top===null)return 0;
+  // count the stars row by row through their wide middle (each row its own count — merging rows bridges the small gaps
+  // between overlapping stars) and take the count most rows agree on
+  const rowCount=y=>{ let runs=0,w=0; for(let x=x0;x<=x1;x++){ const [r,g,b]=x<x1?px(x,y):[0,0,0]; if(r>190&&g>130&&b<110)w++; else { if(w>=3)runs++; w=0; } } return runs; };
+  const votes={}; for(let y=top+6;y<=top+12;y++){ const c=rowCount(y); if(c>0&&c<=6)votes[c]=(votes[c]||0)+1; }
+  const best=Object.entries(votes).sort((a,b)=>b[1]-a[1]||b[0]-a[0])[0]; return best?+best[0]:0; }
 async function heroFromHeader(img,from){
   const {head,stars}=prep(img);
   await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -1013,15 +1077,15 @@ async function heroFromHeader(img,from){
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
-  if(!hero.name) setHero({name:m[1].trim(),lvl:m[2],stars},from);
-  else if(!hero.stars&&stars){hero.stars=stars;drawStars();}
+  voteHero(m[1].trim(),m[2],stars,from);
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
   { const clean=t=>t.replace(/[^A-Za-z' \-]/g,'').replace(/\s+/g,' ').trim().replace(/\bl(?=[^aeiouy\s])/g,'I');   // capital I read as l
     const score=t=>t.split(' ').filter(w=>/^[A-Z][a-z']+$/.test(w)||/^(of|the)$/.test(w)).length*2-t.split(' ').length;   // relic names are Title Case
     const a=clean((await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text), b=clean((await worker.recognize(crop(img,1495,245,405,45,2,'inv'))).data.text);
-    relic.name=score(b)>score(a)?b:a; }
+    const sa=snapName(a,RELICS), sb=snapName(b,RELICS);
+    relic.name=sa||sb||(score(b)>score(a)?b:a); relic.nameDoubt=!(sa||sb); }
   relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1')
     .replace(/^\+4(\d{2})$/,'+$1');                                              // '+' read as '4': "+415" -> "+15"
   await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -1048,7 +1112,11 @@ async function processRelic(img){
     if(nm||val)relic.stats.push([nm,val]);
   }
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').trim();
+  { // two differently prepared readings; keep the one with fewer junk words, then tidy the [Buff] brackets
+    const fix=t=>t.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').replace(/[|(\[]([A-Z][a-z]+(?: [A-Z][a-z]+)?)[|!)\]]/g,'[$1]').replace(/\s+([.,%)])/g,'$1').trim();
+    const junk=t=>t.split(/\s+/).filter(w=>w&&!/^[\[(]?[A-Za-z][a-z']*[\])]?[.,:;]?$|^[\[(]?[A-Z][A-Za-z.]*[\])]?[.,]?$|^[+-]?\d+%?[).,]?$|^\(stacks$|^\d+%\)\.?$/.test(w)).length;
+    const r1=fix((await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text), r2=fix((await worker.recognize(crop(img,1455,605,425,190,3,'bw'))).data.text);
+    relic.desc=junk(r2)<junk(r1)?r2:r1; }
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
   await readChampDetails(img); await heroFromHeader(img,'Relic');
@@ -1057,7 +1125,7 @@ async function processRelic(img){
   {const fc={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'}[relic.rarity]||'#2a3448'; const ri=document.getElementById('rImg'); ri.style.border='3px solid '+fc; ri.style.boxShadow='0 0 12px '+fc+'88';}
   document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
   document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:${/Lvl/.test(v)?'#8a93a6':'#5fd16a'}">${v}</b>`).join(' · ')}`;
-  setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
+  setBadgeId('rBadge',relic.nameDoubt?'warn':'ok',relic.nameDoubt?'name to check':'read ✓'); document.getElementById('rName').classList.toggle('bad',!!relic.nameDoubt); document.getElementById('rpanel').classList.add('filled');
   checkRelic();
 }
 async function processBlessing(img){
@@ -1069,13 +1137,15 @@ async function processBlessing(img){
     const w=(data.words||[]).find(w=>/bless/i.test(w.text)); if(w)bx=1440+(w.bbox.x0+w.bbox.x1)/2/k;
     await worker.setParameters({tessedit_pageseg_mode:'7'}); }
   bless.name='';
-  for(const m of ['bw','inv']){ if(bless.name.length<3) bless.name=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim(); }
+  let bRaw=''; for(const m of ['bw','inv']){ const t=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
+    const sn=snapName(t,BLESSINGS); if(sn){ bless.name=sn; break; } if(!bRaw&&t.length>=3)bRaw=t; }
+  bless.doubt=!bless.name; if(!bless.name)bless.name=bRaw;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   bless.img=cropURL(img,Math.round(bx-88),788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
   refreshBlessNote();
-  setBadgeId('bBadge','ok','read ✓'); document.getElementById('bpanel').classList.add('filled');
+  setBadgeId('bBadge',bless.doubt?'warn':'ok',bless.doubt?'name to check':'read ✓'); document.getElementById('bName').classList.toggle('bad',!!bless.doubt); document.getElementById('bpanel').classList.add('filled');
 }
 function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
   [p+'View',p+'Err'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(p+'Drop').style.display='';setBadgeId(p+'Badge','','empty');}
@@ -1360,7 +1430,7 @@ function parse(text){
   // special accessories carry their own name in the title ("Revenge Amulet"); standard ones just say "Amulet"
   { const m=(lines[0]||'').match(/((?:[A-Z][a-z']+\s+){1,3})(Ring|Amulet|Banner)\b/); if(m) it.name=(m[1]+m[2]).trim(); }
   for(const ln of lines){
-    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){it.set=m[1].replace(/\s+x$/i,'').trim();continue;}
+    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){ const raw=m[1].replace(/\s+x$/i,'').trim(); const sn=snapName(raw,SETS); it.set=sn||raw; it.setDoubt=!sn&&!!raw; continue;}
     if(!it.main){
       // main line: "... +16] ATK 265 ATK 80" / "HP 600" — first stat+number pair(s) on the line
       const re=new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'); const pairs=[...ln.matchAll(re)];
@@ -1426,9 +1496,9 @@ function applyHero(el,txt,stars){
   const mis=el.querySelector('.mis'); mis.style.display='none';
   if(!m)return;
   const name=m[1].trim(), lvl=m[2]; el._hero={name,lvl,stars};
-  if(!hero.name){
-    setHero({name,lvl,stars},el.dataset.slot);
-  }else if(name.toLowerCase()!==hero.name.toLowerCase()){
+  voteHero(name,lvl,stars,el.dataset.slot);
+  // a different champion, not a misread letter ("Ninia" for Ninja)
+  if(hero.name&&lev(name.toLowerCase(),hero.name.toLowerCase())>Math.max(2,Math.round(hero.name.length*0.3))){
     mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
   }
 }
@@ -1448,10 +1518,12 @@ async function mainCheck(img,it){
   if(!it.main)return;
   const norm=t=>t.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1').replace(/(\d)[Oo]/g,'$10').replace(/(\d)[Oo]/g,'$10');   // "ATK8O" is ATK 80
   const read=async mode=>{ const t=norm((await worker.recognize(crop(img,140,120,380,34,3,mode))).data.text);
-    return [...t.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))].map(p=>p[2]); };
+    const P=[...t.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))]; const v=P.map(p=>p[2]); v.stats=P.map(p=>normStat(p[1])); return v; };
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   try{ const r1=await read('inv'); if(!r1.length)return; let r2=null;
     // settle each value by majority of three readings: the item text, and two readings of the main line alone
+    // an ascension bonus the item text missed: take it when both readings of the main line agree on it
+    if(!it.asc&&r1.length>=2){ r2=await read('bw'); if(r2.length>=2&&r2[1]===r1[1]&&r2.stats[1]===r1.stats[1]&&r1.stats[1])it.asc={s:r1.stats[1],v:r1[1]}; }
     for(const [i,f] of [[0,it.main],[1,it.asc]]){ if(!f||!r1[i]||r1[i]===f.v)continue;
       if(!r2)r2=await read('bw');
       if(r2[i]===f.v)continue;                         // 2 : 1 for the first reading
@@ -1517,7 +1589,7 @@ function fill(el,it,raw){
   const q=c=>el.querySelector(c); let issues=0;
   const set=(node,val,ok=true)=>{node.value=val||'';node.classList.toggle('bad',!ok);if(!ok)issues++;};
   const acc=!!ACC_MAIN[el.dataset.slot];
-  set(q('.f-set'),it.set,!!it.set||acc);   // standard faction accessories have no set
+  set(q('.f-set'),it.set,(!!it.set||acc)&&!it.setDoubt);   // standard faction accessories have no set
   q('.namerow').style.display=acc?'':'none'; set(q('.f-name'),acc?it.name:'');
   set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
   set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v)&&it.main.sure!==false);
