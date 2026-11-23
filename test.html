@@ -1222,6 +1222,7 @@ async function pump(){
     await worker.setParameters({tessedit_char_whitelist:''});
     mergeNums(item,nums);
     await rowCheck(img,item);
+    await mainCheck(img,item);
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -1395,6 +1396,19 @@ function applyHero(el,txt,stars){
 const SUBMAX={'ATK%':30,'HP%':30,'DEF%':30,'SPD':30,'C.RATE':30,'C. RATE':30,'C.DMG':35,'C. DMG':35,'ACC':60,'RES':60,'ATK':125,'DEF':125,'HP':1500};
 function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if(isNaN(n))return false;
   const k=(stat||'').toUpperCase(), key=['ATK','HP','DEF'].includes(k)&&pct?k+'%':k; const mx=SUBMAX[key]; return mx===undefined||n<=(glyph?mx/2:mx); }
+// second reading of the main line alone (main stat + ascension bonus): a value the two readings disagree on is
+// shown as "to check" instead of passing silently ("ATK 80" read as "ATK 8")
+async function mainCheck(img,it){
+  if(!it.main)return;
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  try{ const t=(await worker.recognize(crop(img,140,120,380,34,3,'inv'))).data.text.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1');
+    const t2=t.replace(/(\d)[Oo]/g,'$10').replace(/(\d)[Oo]/g,'$10');                          // "ATK8O" is ATK 80
+    const pairs=[...t2.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))];
+    if(!pairs.length)return;
+    if(pairs[0]&&pairs[0][2]!==it.main.v)it.main.sure=false;
+    if(it.asc&&pairs[1]&&pairs[1][2]!==it.asc.v)it.asc.sure=false;
+  } finally { await worker.setParameters({tessedit_pageseg_mode:'6'}); }
+}
 // third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
 async function rowCheck(img,it){
   // used only as a referee: alone it is often wrong, so it never overrides two agreeing readings
@@ -1451,8 +1465,8 @@ function fill(el,it,raw){
   set(q('.f-set'),it.set,!!it.set||acc);   // standard faction accessories have no set
   q('.namerow').style.display=acc?'':'none'; set(q('.f-name'),acc?it.name:'');
   set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
-  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v));
-  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v);
+  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v)&&it.main.sure!==false);
+  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v,!(it.asc&&it.asc.sure===false));
   el.querySelectorAll('.row.sub').forEach((r,i)=>{
     const s=it.subs[i]||{};
     set(r.querySelector('.f-ss'),s.s,!!s.s);
