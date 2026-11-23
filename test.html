@@ -344,6 +344,7 @@ $('simRun').onclick=async()=>{
     if(cardPng){ await writeBlob(fname.replace(/\.json$/,'_card.png'),cardPng.blob);
       // a difference in an item that the reader itself marked "to check" is caught, not silent: amber, not red
       const silent=diffs.filter(d=>{ const t=d.match(/^totals\.rows\.(\d+)/); if(t&&snap.totals&&snap.totals.rows[t[1]]&&!snap.totals.rows[t[1]].ok)return false;   // a Total Stats row the reader marked as not adding up
+        if(/^relic\./.test(d)&&snap.relic&&snap.relic.doubt)return false;                                     // relic marked "to check"
         const m=d.match(/^slots\.(\w+)/); const fl=o=>o&&o.slots[m[1]]&&o.slots[m[1]].flagged.length; return !(m&&(fl(snap)||fl(baseline.ref))); });   // marked as doubtful here or in the original: not silent
       const cls2=fails.length||silent.length?'bad':(flagged.length||diffs.length?'warn':'ok');
       $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' ('+RATIO(r)+') · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
@@ -880,6 +881,17 @@ async function processTotals(img){
   totals.rows=rows; totals.area=area; renderTotals();
   const bad=rows.filter(r=>!r.ok).length;
   setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
+  checkRelic();
+}
+// the relic's unlocked bonuses must appear in the Relic column of Total Stats (read independently): a bonus that
+// isn't there is a misread — mark the relic "to check" instead of letting it pass
+function checkRelic(){
+  if(!relic.stats||!relic.stats.length||!totals.rows||!totals.rows.length)return;
+  const col=totals.rows.filter(r=>r.ok&&r.cells[8]).map(r=>r.cells[8]); if(!col.length&&totals.rows.some(r=>!r.ok))return;
+  const bad=relic.stats.filter(([n,v])=>{ const x=tnum(v); if(x===null||isNaN(x))return false;
+    return !col.some(c=>tnum(c)===x&&/%/.test(c)===/%/.test(v)); });
+  relic.doubt=bad.length>0;
+  if(bad.length)setBadgeId('rBadge','warn',`${bad.length} bonus${bad.length>1?'es':''} to check`);
 }
 function setTBadge(c,t){const b=document.getElementById('tBadge');b.className='badge '+c;b.textContent=t;}
 function tErr(msg){const e=document.getElementById('tErr');e.innerHTML='⚠ '+msg;e.style.display='block';setTBadge('bad','wrong screenshot');
@@ -1043,6 +1055,7 @@ async function processRelic(img){
   document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
   document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:${/Lvl/.test(v)?'#8a93a6':'#5fd16a'}">${v}</b>`).join(' · ')}`;
   setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
+  checkRelic();
 }
 async function processBlessing(img){
   await worker.setParameters({tessedit_pageseg_mode:'7'});
