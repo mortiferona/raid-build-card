@@ -497,7 +497,11 @@ function voteHero(name,lvl,stars,from,pink,gold){
 function setHero(h,from){
   Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,pink:h.pink||0,gold:h.gold||0,from}:{name:'',lvl:'',stars:0,pink:0,gold:0,from:''});
   document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
-  document.getElementById('hNote').textContent=h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
+  // game rule: each rank (star) allows 10 more levels — level 41-50 needs at least 5 stars, 51-60 needs 6
+  const tot=(hero.stars||0)+(hero.pink||0)+(hero.gold||0), lv=parseInt(hero.lvl,10), need=lv?Math.ceil(lv/10):0;
+  hero.starDoubt=!!(h&&lv&&tot&&tot<need);
+  document.getElementById('hNote').textContent=hero.starDoubt?`⚠ Level ${lv} needs at least ${need} stars, but ${tot} were read — please check the stars.`
+    :h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
 }
 function clearSlot(el){
   for(let i=queue.length-1;i>=0;i--)if(queue[i].el===el)queue.splice(i,1);
