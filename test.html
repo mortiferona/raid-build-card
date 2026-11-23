@@ -618,8 +618,13 @@ function popupRect(img){
   if(bot<0)return null;
   const sc=(bot-top)/POP_H;
   let xR=-1; for(let x=Math.min(w-1,xL+Math.round((bot-top)*2.6));x>xL+(bot-top)*0.4&&xR<0;x--){let n=0;for(let y=top;y<bot;y++)if(cy(x,y))n++; if(n>=(bot-top)*0.6)xR=x;}
-  // the frame is 498 x 535 px on an undistorted screen: a different width/height means the picture is stretched sideways
-  const k=xR>0?((xR-xL)/(bot-top))/(498/535):null;
+  // stretch is measured on the round close button at the frame's top-right corner: a circle stays a circle unless the
+  // picture itself is stretched (the frame alone can't tell — in a wide window the game makes the item window wider)
+  let k=null;
+  if(xR>0){ const y0=top+4,y1=Math.min(H-1,Math.round(top+110*sc)); let gap=0,x=xR-3,xa=-1,xb=-1,ya=1e9,yb=-1;
+    while(x>xL&&gap<=4){ let hit=false; for(let y=y0;y<y1;y++)if(cy(x,y)){hit=true;if(y<ya)ya=y;if(y>yb)yb=y;}
+      if(hit){ if(xb<0)xb=x; xa=x; gap=0; } else if(xb>=0)gap++; else if(x<xR-40*sc)break; x--; }
+    if(xb>0&&yb>ya&&yb-ya>20*sc) k=((xb-xa)/(yb-ya))/1.012; }   // 1.012: the same button on an undistorted screen
   return {s:sc,T:top,L:xL-POP_X*sc,W,H,k};
 }
 // black bars (the game kept its 16:9 shape inside a screen of another shape): cut them off, so only the game is read
