@@ -173,7 +173,7 @@ input[type=file]{display:none}
       <div class="grp"><div class="gl">Screen size <a data-all="simRes">all</a> · <a data-none="simRes">none</a></div><div id="simRes" class="chips"></div></div>
       <div class="grp"><div class="gl">Taken as</div><div id="simMode" class="chips"></div></div>
       <div class="grp"><div class="gl">File type</div><div id="simFmt" class="chips"></div></div>
-      <div class="note">Nothing ticked = all screen widths, same picture resized, PNG. Each screenshot keeps its own shape and is only made smaller (bigger screens need real screenshots), so the test is never harder or easier than reality. Use “window” and “smaller window” only with full-screen screenshots — a screenshot that already shows a window would get a second one around it.</div>
+      <div class="note">Nothing ticked = all screen widths, same picture resized, PNG. Each screenshot keeps its own shape. Smaller screens are made by shrinking — like reality. Wider than your screenshots is “enlarged”: blurrier than a real bigger screen, so a pass is a good sign, a fail is not proof. Use “window” and “smaller window” only with full-screen screenshots — a screenshot that already shows a window would get a second one around it.</div>
     </section>
 
     <section class="sc">
@@ -337,9 +337,10 @@ $('simRun').onclick=async()=>{
   if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png'];   // not ticked: the plain choice, no question asked
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
   const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); const srcW=(await load(files[0])).width;   // only smaller screens: blowing a picture up only blurs it, a real bigger screen is sharp
-  const skipped=res.filter(r=>r!=='orig'&&+r>srcW);
-  res.filter(r=>r!=='orig'&&+r<=srcW).forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
-  if(skipped.length)alert(`Your screenshots are ${srcW} wide. Screens wider than that (${skipped.join(', ')}) are skipped: making a picture bigger only blurs it, it is not what a bigger screen gives. To test those, use real screenshots taken at that size.`);   // black bars on a 16:9 screen = same as full
+  // wider than the screenshots: the picture is blown up — blurrier than a real bigger screen, so a pass there is a good sign
+  // and a fail is not proof of a real problem (those sizes are marked "enlarged")
+  res.filter(r=>r!=='orig').forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
+  window.__srcW=srcW;   // black bars on a 16:9 screen = same as full
   $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
   const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
   for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
@@ -360,7 +361,7 @@ $('simRun').onclick=async()=>{
         if(/^relic\./.test(d)&&snap.relic&&snap.relic.doubt)return false;                                     // relic marked "to check"
         const m=d.match(/^slots\.(\w+)/); const fl=o=>o&&o.slots[m[1]]&&o.slots[m[1]].flagged.length; return !(m&&(fl(snap)||fl(baseline.ref))); });   // marked as doubtful here or in the original: not silent
       const cls2=fails.length||silent.length?'bad':(flagged.length||diffs.length?'warn':'ok');
-      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r+' wide · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
+      $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r+' wide'+(+r>(window.__srcW||1e9)?' (enlarged)':'')+' · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
     const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
     $('simTab').insertAdjacentHTML('beforeend',`<tr><td>${r}</td><td>${m}</td><td>${f}</td><td class="${fails.length?'bad':'ok'}">${rec.recognised}${fails.length?'<br>'+fails.map(x=>x.replace(/</g,'&lt;')).join('<br>'):''}</td><td class="${flagged.length?'warn':'ok'}">${flagged.join(', ')||'none'}</td><td class="${cls}">${r==='orig'?'(reference)':(diffs.length?diffs.slice(0,8).join('<br>')+(diffs.length>8?`<br>… ${diffs.length-8} more in the log`:''):'none')}</td><td>${(ms/1000).toFixed(0)} s</td></tr>`);
@@ -434,10 +435,12 @@ $('simRun').onclick=async()=>{
 const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet","Banner"];
 const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
 const SETS_HINT="";
-const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
+const state={}; let active=null; const hero={name:'',lvl:'',stars:0,pink:0,gold:0,from:''};
 function refreshBlessNote(){const b=document.getElementById('bInfo');if(!b)return;b.innerHTML=hero.stars?`<span style="color:#ff3b3b;font-size:20px;letter-spacing:3px">${'★'.repeat(hero.stars)}</span>`:'<span style="color:#7f8aa3">stars come from the champion screenshots</span>';}
-function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
-document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
+// header stars: red = awakened, pink = ascended, yellow = neither (the Blessing below keeps only the red ones)
+function starColor(i){ return i<=hero.stars?'#ff3b3b':i<=hero.stars+(hero.pink||0)?'#ff7ad9':i<=hero.stars+(hero.pink||0)+(hero.gold||0)?'#ffd23f':null; }
+function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>{const c=starColor(i);return `<span data-i="${i}" class="${c?'':'off'}"${c?` style="color:${c}"`:''}>★</span>`;}).join('');}
+document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;hero.pink=Math.min(hero.pink||0,6-hero.stars);hero.gold=Math.min(hero.gold||0,6-hero.stars-hero.pink);drawStars();}});   // a click sets the red (awakened) count
 document.addEventListener('DOMContentLoaded',()=>{drawStars();
   document.getElementById('hName').addEventListener('input',e=>hero.name=e.target.value.trim());
   document.getElementById('hLvl').addEventListener('input',e=>hero.lvl=e.target.value.trim());}); let worker=null; const queue=[]; let busy=false;
@@ -484,14 +487,15 @@ function emptySlot(el){
 }
 // every screenshot shows the champion's name and stars in its header: take what most of them agree on, not just the first
 const HVOTES=[];
-function voteHero(name,lvl,stars,from){
-  if(name)HVOTES.push({name,lvl,stars,from});
+function voteHero(name,lvl,stars,from,pink,gold){
+  if(name)HVOTES.push({name,lvl,stars,from,sk:`${stars}|${pink||0}|${gold||0}`});
   const tally=(f)=>{ const c={}; HVOTES.forEach(v=>{ const k=v[f]; if(k)c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; };
-  const n=tally('name'), st=tally('stars'), lv=tally('lvl'); if(!n)return;
-  if(n[0]!==hero.name||(st&&+st[0]!==hero.stars)) setHero({name:n[0],lvl:lv?lv[0]:hero.lvl,stars:st?+st[0]:hero.stars},from);
+  const n=tally('name'), sk=tally('sk'), lv=tally('lvl'); if(!n)return;
+  const [r,p,g]=(sk?sk[0]:`${hero.stars}|${hero.pink}|${hero.gold}`).split('|').map(Number);
+  if(n[0]!==hero.name||r!==hero.stars||p!==hero.pink||g!==hero.gold) setHero({name:n[0],lvl:lv?lv[0]:hero.lvl,stars:r,pink:p,gold:g},from);
 }
 function setHero(h,from){
-  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,from}:{name:'',lvl:'',stars:0,from:''});
+  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,pink:h.pink||0,gold:h.gold||0,from}:{name:'',lvl:'',stars:0,pink:0,gold:0,from:''});
   document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
   document.getElementById('hNote').textContent=h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
 }
@@ -1075,13 +1079,13 @@ function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===nul
   const votes={}; for(let y=top+6;y<=top+12;y++){ const c=rowCount(y); if(c>0&&c<=6)votes[c]=(votes[c]||0)+1; }
   const best=Object.entries(votes).sort((a,b)=>b[1]-a[1]||b[0]-a[0])[0]; return best?+best[0]:0; }
 async function heroFromHeader(img,from){
-  const {head,stars}=prep(img);
+  const {head,stars,starsPink,starsGold}=prep(img);
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   const txt=(await worker.recognize(head)).data.text;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
-  voteHero(m[1].trim(),m[2],stars,from);
+  voteHero(m[1].trim(),m[2],stars,from,starsPink,starsGold);
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -1143,13 +1147,15 @@ async function processBlessing(img){
   bless.name='';
   let bRaw=''; for(const m of ['bw','inv']){ const t=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
     const sn=snapName(t,BLESSINGS); if(sn){ bless.name=sn; break; } if(!bRaw&&t.length>=3)bRaw=t; }
-  bless.doubt=!bless.name; if(!bless.name)bless.name=bRaw;
+  // an empty Blessing slot (just the "+" sign) gives no word at all: the champion simply has no Blessing yet
+  bless.none=!bless.name&&!/[A-Za-z]{4,}/.test(bRaw);
+  bless.doubt=!bless.name&&!bless.none; if(!bless.name&&!bless.none)bless.name=bRaw;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   bless.img=cropURL(img,Math.round(bx-88),788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
   refreshBlessNote();
-  setBadgeId('bBadge',bless.doubt?'warn':'ok',bless.doubt?'name to check':'read ✓'); document.getElementById('bName').classList.toggle('bad',!!bless.doubt); document.getElementById('bpanel').classList.add('filled');
+  setBadgeId('bBadge',bless.doubt?'warn':'ok',bless.doubt?'name to check':bless.none?'no Blessing':'read ✓'); if(bless.none)document.getElementById('bName').value='— none —'; document.getElementById('bName').classList.toggle('bad',!!bless.doubt); document.getElementById('bpanel').classList.add('filled');
 }
 function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
   [p+'View',p+'Err'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(p+'Drop').style.display='';setBadgeId(p+'Badge','','empty');}
@@ -1192,7 +1198,7 @@ function buildCard(){
     return `<div class="gc"><div class="gtop">${d.icon?`<img src="${d.icon}">`:'<div class="ph"></div>'}<div class="gm"><div class="sl">${slot}</div>
       <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
       ${d.name?`<div class="setn">${esc(d.name)}</div>`:''}${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
-  const stars='★'.repeat(hero.stars||0);
+  const stars=[1,2,3,4,5,6].map(i=>{const c=starColor(i);return c?`<span style="color:${c}">★</span>`:'';}).join('');
   const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
   const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
   const cls=j=>j===9?'ar':(j===10?'tot':'');
@@ -1217,7 +1223,7 @@ function buildCard(){
       <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div${/Lvl/.test(v)?' class="lk"':''}>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
       <div style="flex:1;display:flex;align-items:center"><div class="rd">${esc(relic.desc)}</div></div><img class="sets" src="${relic.sets}">`:`<div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center"><b>Relic</b>not added yet</div>`;
   const blessBody=bless.name?`<div class="brow"><img src="${bless.img}"><div><div class="bl2">Blessing</div><div class="bn">${esc(bless.name)}</div><div class="bs">${bstars}</div></div></div>`
-      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">not added yet</div><div class="bs">${bstars}</div></div></div>`;
+      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">${bless.none?'none yet':'not added yet'}</div><div class="bs">${bless.none?'':bstars}</div></div></div>`;
   return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
@@ -1326,7 +1332,7 @@ async function pump(){
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
   try{
     badge(el,'busy','reading…'); setStatus(`Reading ${el.dataset.slot}…`);
-    const {bw,icon,valCrop,head,stars}=prep(img);
+    const {bw,icon,valCrop,head,stars,starsPink,starsGold}=prep(img);
     el.querySelector('.thumb img').src=icon;
     const {data}=await worker.recognize(bw);
     const item=parse(data.text);
@@ -1345,7 +1351,7 @@ async function pump(){
       if(img2){ queue.unshift({el,img:img2,normalized:true}); busy=false; pump(); return; } }
     if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
     if(bad){ showErr(el,bad,img); }
-    else { applyHero(el,ht,stars); fill(el,item,data.text); }
+    else { applyHero(el,ht,stars,starsPink,starsGold); fill(el,item,data.text); }
   }catch(err){badge(el,'warn','error');console.error(err);}
   busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump();
 }
@@ -1381,10 +1387,12 @@ function prep(img){
   // red stars: count runs of strongly red columns across the header band
   const sc=document.createElement('canvas'); const sw=Math.round(900*s), sh=Math.round(35*s);
   sc.width=sw; sc.height=sh; const sg=sc.getContext('2d'); sg.drawImage(img,520*s,25*s,900*s,35*s,0,0,sw,sh);
-  const sd=sg.getImageData(0,0,sw,sh).data; let runs=0,prev=false; const need=Math.max(3,Math.round(4*s));
-  for(let x=0;x<sw;x++){let n=0;for(let y=0;y<sh;y++){const k=(y*sw+x)*4;if(sd[k]>200&&sd[k+1]<75&&sd[k+2]<75)n++;}
-    const on=n>=need; if(on&&!prev)runs++; prev=on;}
-  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:Math.min(runs,6)};
+  const sd=sg.getImageData(0,0,sw,sh).data; const need=Math.max(3,Math.round(4*s));
+  // star colours in the game: red = awakened, pink = ascended (not yet awakened), yellow = neither
+  const isRed=(r,g,b)=>r>200&&g<75&&b<75, isPink=(r,g,b)=>r>185&&g>60&&g<140&&b>145, isGold=(r,g,b)=>r>200&&g>150&&b<100;
+  const runsOf=test=>{ let runs=0,prev=false; for(let x=0;x<sw;x++){let n=0;for(let y=0;y<sh;y++){const k=(y*sw+x)*4;if(test(sd[k],sd[k+1],sd[k+2]))n++;} const on=n>=need; if(on&&!prev)runs++; prev=on;} return runs; };
+  const red=Math.min(runsOf(isRed),6), pink=Math.min(runsOf(isPink),6-red), gold=Math.min(runsOf(isGold),6-red-pink);
+  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:red,starsPink:pink,starsGold:gold};
 }
 
 /* ---------- parsing ---------- */
@@ -1493,14 +1501,14 @@ function showErr(el,e,img){
     const target=document.querySelector(`.slot[data-slot="${b.dataset.to}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
     queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }));
 }
-function applyHero(el,txt,stars){
+function applyHero(el,txt,stars,pink,gold){
   el._hero=null;
   const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');           // drop the "2,191/2,200" storage counter
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i);
   const mis=el.querySelector('.mis'); mis.style.display='none';
   if(!m)return;
   const name=m[1].trim(), lvl=m[2]; el._hero={name,lvl,stars};
-  voteHero(name,lvl,stars,el.dataset.slot);
+  voteHero(name,lvl,stars,el.dataset.slot,pink,gold);
   // a different champion, not a misread letter ("Ninia" for Ninja)
   if(hero.name&&lev(name.toLowerCase(),hero.name.toLowerCase())>Math.max(2,Math.round(hero.name.length*0.3))){
     mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
