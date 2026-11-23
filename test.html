@@ -337,7 +337,9 @@ $('simRun').onclick=async()=>{
   if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
   const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); const srcW=(await load(files[0])).width;   // only smaller screens: blowing a picture up only blurs it, a real bigger screen is sharp
-  res.filter(r=>r!=='orig'&&+r<=srcW).forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));   // black bars on a 16:9 screen = same as full
+  const skipped=res.filter(r=>r!=='orig'&&+r>srcW);
+  res.filter(r=>r!=='orig'&&+r<=srcW).forEach(r=>modes.forEach(m=>fmts.forEach(f=>combos.push([r,m,f]))));
+  if(skipped.length)alert(`Your screenshots are ${srcW} wide. Screens wider than that (${skipped.join(', ')}) are skipped: making a picture bigger only blurs it, it is not what a bigger screen gives. To test those, use real screenshots taken at that size.`);   // black bars on a 16:9 screen = same as full
   $('simTab').innerHTML='<tr><th>Screen</th><th>Taken as</th><th>File</th><th>Recognised</th><th>"to check"</th><th>Differences from original</th><th>Time</th></tr>';
   const summary={set,batch,version:SIM_VERSION,browser:BROWSER+' '+BVER,userAgent:UA,screen:screen.width+'x'+screen.height+' @'+devicePixelRatio,files:files.map(f=>f.name+' ('+f.size+' B)'),runs:[]};
   for(let i=0;i<combos.length&&!stop;i++){ const [r,m,f]=combos[i];
@@ -1318,7 +1320,7 @@ async function pump(){
             else queue.unshift({unknown:true,img:img2,tag:job.tag,name:job.name,normalized:true}); }
           else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; } }
         else if(job.kindGuess==='relic'||job.kindGuess==='skills'){ await readChampDetails(img); await heroFromHeader(img,'champion screen'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${job.name}: champion details (name, rarity, faction, role)`;} }
-        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — for the Blessing, open the champion from your own roster (Skills tab), not from the Champion Index`; }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — it doesn't look like one of the 13 game screens (items, Total Stats, Relic, Skills, Masteries)`; }
       }
     }catch(err){console.error(err);}
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
