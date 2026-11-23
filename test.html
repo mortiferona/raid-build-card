@@ -244,8 +244,9 @@ const BVER=(UA.match(/(?:Edg|OPR|Firefox|Chrome)\/([\d.]+)/)||['',''])[1];
 const RES=['orig','1280','1366','1536','1600','1920','2560','3200','3840'];
 const RATIO=r=>'';
 const MODES=[['full','Same picture, resized'],['win','Window + taskbar'],['small','Smaller window on desktop']];
-// measured on real screenshots: ShareX JPGs are quality 90; the WebP files saved from Discord are lossless (VP8L)
-const FMTS=[['png','PNG'],['jpg','JPG 90% (ShareX)'],['webp','WebP lossless (Discord)']];
+// measured on real screenshots: ShareX JPGs are quality 90. WebP saved from Discord is lossless (VP8L) — the same pixels
+// as PNG, so testing it would repeat the PNG test
+const FMTS=[['png','PNG'],['jpg','JPG 90% (ShareX)']];
 const $=id=>document.getElementById(id);
 const box=(host,items,on)=>{ $(host).innerHTML=items.map(([v,t])=>`<label class="chip${on.includes(v)?' on':''}"><input type="checkbox" value="${v}" ${on.includes(v)?'checked':''}>${t}</label>`).join('');
   $(host).querySelectorAll('input').forEach(i=>i.onchange=()=>i.parentNode.classList.toggle('on',i.checked)); };
