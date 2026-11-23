@@ -334,7 +334,7 @@ $('simRun').onclick=async()=>{
   stop=false; let set='set'; const batch=stamp(); $('simGal').innerHTML='';
   let res=picked('simRes'), modes=picked('simMode'), fmts=picked('simFmt');
   if(!res.length){ res=RES.slice(); if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png']; }   // nothing ticked: all sizes, full screen, PNG
-  if(res.some(r=>r!=='orig')&&(!modes.length||!fmts.length)){alert('For simulated sizes also tick how it was taken and the file type');return;}
+  if(!modes.length)modes=['full']; if(!fmts.length)fmts=['png'];   // not ticked: the plain choice, no question asked
   if(!res.includes('orig'))$('simProg').textContent='Note: "Original" not ticked — results are not compared with the originals';
   const combos=[]; if(res.includes('orig'))combos.push(['orig','orig','orig']); const srcW=(await load(files[0])).width;   // only smaller screens: blowing a picture up only blurs it, a real bigger screen is sharp
   const skipped=res.filter(r=>r!=='orig'&&+r>srcW);
