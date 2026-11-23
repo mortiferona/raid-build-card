@@ -155,6 +155,7 @@ input[type=file]{display:none}
 </style>
 </head>
 <body>
+
 <div class="reset"><div class="ask" id="askReset">Start over and clear everything? <button class="yes" id="yesReset">Yes, clear</button><button id="noReset">No</button></div><button class="x" id="btnReset" title="Start over">✕</button></div>
 <div class="wrap">
   <h1><span class="myname"><i>◆</i>Fragility<i>◆</i></span> Raid Shadow Legends Card</h1>
@@ -217,10 +218,12 @@ input[type=file]{display:none}
 const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet","Banner"];
 const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
 const SETS_HINT="";
-const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
+const state={}; let active=null; const hero={name:'',lvl:'',stars:0,pink:0,gold:0,from:''};
 function refreshBlessNote(){const b=document.getElementById('bInfo');if(!b)return;b.innerHTML=hero.stars?`<span style="color:#ff3b3b;font-size:20px;letter-spacing:3px">${'★'.repeat(hero.stars)}</span>`:'<span style="color:#7f8aa3">stars come from the champion screenshots</span>';}
-function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
-document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
+// header stars: red = awakened, pink = ascended, yellow = neither (the Blessing below keeps only the red ones)
+function starColor(i){ return i<=hero.stars?'#ff3b3b':i<=hero.stars+(hero.pink||0)?'#ff7ad9':i<=hero.stars+(hero.pink||0)+(hero.gold||0)?'#ffd23f':null; }
+function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>{const c=starColor(i);return `<span data-i="${i}" class="${c?'':'off'}"${c?` style="color:${c}"`:''}>★</span>`;}).join('');}
+document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;hero.pink=Math.min(hero.pink||0,6-hero.stars);hero.gold=Math.min(hero.gold||0,6-hero.stars-hero.pink);drawStars();}});   // a click sets the red (awakened) count
 document.addEventListener('DOMContentLoaded',()=>{drawStars();
   document.getElementById('hName').addEventListener('input',e=>hero.name=e.target.value.trim());
   document.getElementById('hLvl').addEventListener('input',e=>hero.lvl=e.target.value.trim());}); let worker=null; const queue=[]; let busy=false;
@@ -265,10 +268,23 @@ function emptySlot(el){
   el.querySelector('.thumb img').removeAttribute('src'); el.querySelector('.raw').textContent='';
   el._hero=null; el.classList.remove('filled'); delete state[el.dataset.slot]; badge(el,'','empty');
 }
+// every screenshot shows the champion's name and stars in its header: take what most of them agree on, not just the first
+const HVOTES=[];
+function voteHero(name,lvl,stars,from,pink,gold){
+  if(name)HVOTES.push({name,lvl,stars,from,sk:`${stars}|${pink||0}|${gold||0}`});
+  const tally=(f)=>{ const c={}; HVOTES.forEach(v=>{ const k=v[f]; if(k)c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; };
+  const n=tally('name'), sk=tally('sk'), lv=tally('lvl'); if(!n)return;
+  const [r,p,g]=(sk?sk[0]:`${hero.stars}|${hero.pink}|${hero.gold}`).split('|').map(Number);
+  if(n[0]!==hero.name||r!==hero.stars||p!==hero.pink||g!==hero.gold) setHero({name:n[0],lvl:lv?lv[0]:hero.lvl,stars:r,pink:p,gold:g},from);
+}
 function setHero(h,from){
-  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,from}:{name:'',lvl:'',stars:0,from:''});
+  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,pink:h.pink||0,gold:h.gold||0,from}:{name:'',lvl:'',stars:0,pink:0,gold:0,from:''});
   document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
-  document.getElementById('hNote').textContent=h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
+  // game rule: each rank (star) allows 10 more levels — level 41-50 needs at least 5 stars, 51-60 needs 6
+  const tot=(hero.stars||0)+(hero.pink||0)+(hero.gold||0), lv=parseInt(hero.lvl,10), need=lv?Math.ceil(lv/10):0;
+  hero.starDoubt=!!(h&&lv&&tot&&tot<need);
+  document.getElementById('hNote').textContent=hero.starDoubt?`⚠ Level ${lv} needs at least ${need} stars, but ${tot} were read — please check the stars.`
+    :h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
 }
 function clearSlot(el){
   for(let i=queue.length-1;i>=0;i--)if(queue[i].el===el)queue.splice(i,1);
@@ -280,7 +296,9 @@ function clearSlot(el){
 }
 function resetAll(){
   clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
-  queue.length=0;
+  queue.length=0; HVOTES.length=0; PENDING.length=0;
+  for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k];             // nothing of the old screenshots may linger
+  const bl=document.getElementById('blog'); if(bl)bl.innerHTML='';
   for(const k in state)delete state[k];
   setHero(null,'');
   document.querySelectorAll('.slot').forEach(el=>{emptySlot(el);el.classList.remove('active');});
@@ -322,12 +340,18 @@ async function identifySlot(img){
 }
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
 async function handleBulk(files){
+  // a whole new set of screenshots (5 or more at once) is a new build: start clean, so nothing of the previous champion stays
+  if(files.length>=5&&(hero.name||document.querySelector('.slot.filled')))resetAll();
   const log=document.getElementById('blog'); log.innerHTML=''; const batch={used:{}};
   for(const f of files){
     let img; try{img=await loadImg(f);}catch(e){continue;}
     const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
     queue.push({unknown:true,img,tag,name:f.name,batch});
   }
+  for(const j of queue){ if(j.batch===batch) j.img=await trimBars(j.img); }
+  const ks=[]; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(r&&r.k)ks.push(r.k); }
+  ks.sort((a,b)=>a-b); const K=ks.length?ks[ks.length>>1]:1; batch.stretch=K;
+  if(Math.abs(K-1)>0.015) for(const j of queue){ if(j.batch===batch){ j.img=await unstretch(j.img,K); } }
   // all item screenshots of one person share the same item window: take the common frame of the batch (median per screen size)
   const groups={}; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(!r)continue; const k=r.W+'x'+r.H; (groups[k]=groups[k]||[]).push(r); }
   for(const k in groups){ const g=groups[k]; if(g.length<2)continue; const med=f=>{const v=g.map(r=>r[f]).sort((a,b)=>a-b);return v[v.length>>1];};
@@ -358,7 +382,7 @@ const POP_H=534.5, POP_X=9.5, POPS={};
 const RBOX=[1515,1637,1760], RROW=546, RLEFT=1459;
 async function panelWords(img){                                  // words of the right part of the screen, read once per screenshot
   if(img._pw)return img._pw;
-  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:1.5;
+  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:Math.min(1.5,2880/W);
   const c=document.createElement('canvas');c.width=Math.round((W-x0)*k);c.height=Math.round(H*k);
   const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,x0,0,W-x0,H,0,0,c.width,c.height);
   await worker.setParameters({tessedit_pageseg_mode:'11'}); const {data}=await worker.recognize(c); await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -386,7 +410,7 @@ async function relicAnchor(img){
       if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); }
     if(xs.length<2)continue; const sh=a.h/18;                                  // bonus names are about 18 units tall
     let sc=null; for(let i=1;i<xs.length;i++){ const gap=xs[i]-xs[i-1], n=Math.max(1,Math.round(gap/(122*sh))); if(n<=2){ const v=gap/(122*n); if(!sc)sc=v; else sc=(sc+v)/2; } }
-    if(!sc||sc<0.25||sc>2)continue;
+    if(!sc||sc<0.25||sc>Math.max(img.naturalWidth/1920,img.naturalHeight/1080)*1.1)continue;   // the game can't be bigger than the picture
     // a value (+number or locked "Lvl") must sit under the names
     const vals=ws.filter(v=>v.y>a.y+8*sc&&v.y<a.y+50*sc&&/^\+?\d|lvl|lv/i.test(v.t)).length; if(!vals)continue;
     const score=xs.length*2+vals; if(!best||score>best.score)best={score,xs,y:a.y,s:sc,words:ws};
@@ -410,7 +434,39 @@ function popupRect(img){
   if(rows.length<2)return null;
   const top=rows[0]; let bot=-1; for(const y of rows){const h=y-top; if(h>=H*0.3&&h<=H*0.78)bot=y;}
   if(bot<0)return null;
-  const sc=(bot-top)/POP_H; return {s:sc,T:top,L:xL-POP_X*sc,W,H};
+  const sc=(bot-top)/POP_H;
+  let xR=-1; for(let x=Math.min(w-1,xL+Math.round((bot-top)*2.6));x>xL+(bot-top)*0.4&&xR<0;x--){let n=0;for(let y=top;y<bot;y++)if(cy(x,y))n++; if(n>=(bot-top)*0.6)xR=x;}
+  // stretch is measured on the round close button at the frame's top-right corner: a circle stays a circle unless the
+  // picture itself is stretched (the frame alone can't tell — in a wide window the game makes the item window wider)
+  let k=null;
+  if(xR>0){ const y0=top+4,y1=Math.min(H-1,Math.round(top+110*sc)); let gap=0,x=xR-3,xa=-1,xb=-1,ya=1e9,yb=-1;
+    while(x>xL&&gap<=4){ let hit=false; for(let y=y0;y<y1;y++)if(cy(x,y)){hit=true;if(y<ya)ya=y;if(y>yb)yb=y;}
+      if(hit){ if(xb<0)xb=x; xa=x; gap=0; } else if(xb>=0)gap++; else if(x<xR-40*sc)break; x--; }
+    if(xb>0&&yb>ya&&yb-ya>20*sc) k=((xb-xa)/(yb-ya))/1.012;    // 1.012: the same button on an undistorted screen
+    // the frame (498 x 535 undistorted) is five times bigger, so more precise: use it when it tells the same story
+    // — but only when the button says the picture IS stretched: a round button means not stretched at all, and then a
+    // different frame shape is the game re-laying out its window (wider or narrower), not a stretch
+    const kf=((xR-xL)/(bot-top))/(498/535);
+    if(k&&Math.abs(k-1)<0.03)k=1; else if(k&&Math.abs(kf/k-1)<0.05)k=kf; }
+  return {s:sc,T:top,L:xL-POP_X*sc,W,H,k};
+}
+// black bars (the game kept its 16:9 shape inside a screen of another shape): cut them off, so only the game is read
+async function trimBars(img){
+  const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,W,H).data;
+  const dark=(x,y)=>{const k=(y*W+x)*4;return d[k]<10&&d[k+1]<10&&d[k+2]<10;};
+  const rowDark=y=>{for(let x=0;x<W;x+=3)if(!dark(x,y))return false;return true;}, colDark=x=>{for(let y=0;y<H;y+=3)if(!dark(x,y))return false;return true;};
+  let t=0,b=H-1,l=0,r=W-1; while(t<H/4&&rowDark(t))t++; while(b>H*3/4&&rowDark(b))b--; while(l<W/4&&colDark(l))l++; while(r>W*3/4&&colDark(r))r--;
+  if(t<4&&H-1-b<4&&l<4&&W-1-r<4)return img;                                   // no bars
+  const o=document.createElement('canvas');o.width=r-l+1;o.height=b-t+1;o.getContext('2d').drawImage(img,l,t,o.width,o.height,0,0,o.width,o.height);
+  const bl=await new Promise(z=>o.toBlob(z,'image/png')); return loadImg(bl);
+}
+// a screen of another shape (16:10, 4:3, 21:9 ...) with the game filling it stretches the picture sideways:
+// measure the stretch on the item frames of the batch and squeeze every screenshot back to the normal shape
+async function unstretch(img,k){
+  const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth/k); c.height=img.naturalHeight;
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/png')); return loadImg(b);
 }
 // windows narrower than 16:9: the champion screen keeps its top part glued to the top and its bottom part (Tavern,
 // Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
@@ -421,7 +477,7 @@ function vAnchorOf(kind,x,y){
   return y>=740?'B':'T';
 }
 async function ocrWords(img){
-  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
+  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):(W>2400?1920/W:1);   // read big screens at the reference size
   const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
   const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
   await worker.setParameters({tessedit_pageseg_mode:'11'});
@@ -458,9 +514,11 @@ function fitKind(kind,words,imgW){
     const a=M[i],b=M[j]; let sc=null;
     if(Math.abs(b.r[1]-a.r[1])>120&&a.va===b.va) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
     else if(a.a===b.a&&Math.abs(b.r[0]-a.r[0])>200&&Math.abs(b.r[1]-a.r[1])<40) sc=(b.o.x-a.o.x)/(b.r[0]-a.r[0]);
-    if(!sc||sc<0.3||sc>1.8)continue;
+    if(!sc||sc<0.3||sc>imgW/1920*1.1)continue;                       // no fixed upper limit: 4K and 5K screens are bigger than 1.8
     if(a.va!=='T')continue; const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
     const h=evalH(sc,y0,offs); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
+  // the plainest guess is always on the table: the game fills the picture
+  { const h=evalH(imgW/1920,0,{C:imgW/2}); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
   return best;
 }
 function drawNormalized(img,kind,F){
@@ -496,10 +554,28 @@ async function autoNormalize(img){
   if(bk==='relic'||bk==='skills'||!best||best.n<3){
     for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ let ra=await find(img);
       // two independent scales must agree: the landmarks' and the whole screen's (when the screen was found)
-      if(ra&&best&&best.n>=3&&Math.abs(ra.s-best.s)>best.s*0.05){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
+      // ... and so must the two positions (the panel sits at the right edge, near the top). When they disagree, the screen
+      // itself is the third judge: a game filling the picture has scale = height/1080 and its right edge at the picture's edge
+      // the item windows of the same batch tell where the game is and how big (exact even when the game is a small window on
+      // a desktop); without them, assume the game fills the picture
+      const W_=img.naturalWidth, PB=POPS[img.naturalWidth+'x'+img.naturalHeight];
+      const G=PB&&PB.batch?{s:PB.s,ay:PB.T,ax:null}:{s:img.naturalHeight/1080,ay:0,ax:W_-1920*img.naturalHeight/1080};
+      const dist=(s_,ay,ax)=>Math.abs(s_-G.s)/G.s*100+Math.abs(ay-G.ay)/G.s/8+(G.ax===null?0:Math.abs(ax-G.ax)/G.s/8);
+      const fitAx=best&&best.off&&best.off.R!==undefined?best.off.R-1920*best.s:null;
+      const disagree=ra&&best&&best.n>=3&&(Math.abs(ra.s-best.s)>best.s*0.05||Math.abs(ra.ay-best.y0)>8*best.s||(fitAx!==null&&Math.abs(ra.ax-fitAx)>8*best.s));
+      if(disagree&&dist(ra.s,ra.ay,ra.ax)>dist(best.s,best.y0,fitAx===null?G.ax:fitAx)){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
       if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
         return {img:out,kind,fit:F}; } } }
-  if(!best||best.n<3)return {img,kind:null};
+  if(!best||best.n<3){
+    // the Masteries screen has almost no words to find it by; on a small screen even those can be missed. The item windows
+    // of the same batch tell exactly where the game is — if the mastery trees sit there with lit nodes, it is the Masteries screen
+    const PB=POPS[img.naturalWidth+'x'+img.naturalHeight];
+    if(PB&&PB.batch){ const C=PB.L<5*PB.s?img.naturalWidth/2:PB.L+960*PB.s;   // game touching the left edge fills the width (its window can be wider than 16:9)
+      const F={s:PB.s,y0:PB.T,y0B:PB.T,off:{L:C-960*PB.s,C,R:C+960*PB.s},n:0};
+      const cand=await drawNormalized(img,'masteries',F), cnt=countMasteries(cand), tot=cnt.reduce((a,c)=>a+c[1],0), tr=cnt.filter(c=>c[1]>0).length;
+      if(tot>=3&&tot<=15&&tr<=2){ cand._kind='masteries'; return {img:cand,kind:'masteries',fit:F}; } }
+    return {img,kind:null};
+  }
   const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
   if(plain)return {img,kind:bk};
   return {img:await drawNormalized(img,bk,best),kind:bk,fit:best};
@@ -507,7 +583,7 @@ async function autoNormalize(img){
 /* ---------- find the game inside any screenshot (taskbar, window borders, smaller window) ---------- */
 const REFWORDS={"rate":[[105,173],[1524,917],[105,237],[100,656]],"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363],[336,320]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352],[231,992],[524,992],[915,992]],"storage":[[1025,356]],"equipped":[[238,378],[328,408],[1629,224]],"bonus":[[126,406],[322,992]],"total":[[1664,702],[1850,320],[149,992]],"stats":[[1735,702],[194,320]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"showing":[[1224,228]],"basic":[[132,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320],[1738,222]],"guardians":[[984,334]],"ignore":[[76,918]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"offense":[[330,150]],"defense":[[960,150],[1250,162]],"support":[[1590,150]],"info":[[1278,208]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]]};
 async function locateGame(img,upForce,bin){
-  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):1);
+  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):(W>2400?1920/W:1));
   const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
   const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
   if(bin){const d=g.getImageData(0,0,c.width,c.height),p=d.data;for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11,v=l>170?0:255;p[i]=p[i+1]=p[i+2]=v;}g.putImageData(d,0,0);}
@@ -524,7 +600,7 @@ async function locateGame(img,upForce,bin){
     const a=O[i],b=O[j],dob=Math.hypot(b.x-a.x,b.y-a.y); if(dob<150)continue;
     for(const r1 of REFWORDS[a.t])for(const r2 of REFWORDS[b.t]){
       const dref=Math.hypot(r2[0]-r1[0],r2[1]-r1[1]); if(dref<250)continue;
-      const s=dob/dref; if(s<0.35||s>1.7)continue;
+      const s=dob/dref; if(s<0.35||s>Math.max(img.naturalWidth/1920,img.naturalHeight/1080)*1.1)continue;
       const ang=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r2[1]-r1[1],r2[0]-r1[0]); if(Math.abs(Math.atan2(Math.sin(ang),Math.cos(ang)))>0.04)continue;
       const tx=a.x-s*r1[0],ty=a.y-s*r1[1]; const [n,res]=score(s,tx,ty);
       if(!best||n>best.n||(n===best.n&&res<best.res))best={s,tx,ty,n,res,span:dob};
@@ -591,7 +667,24 @@ async function readRow(img,y){
   for(const cells of [...out,m0]) for(let j=1;j<10;j++){ const c=cells[j]; if(!c)continue;
     for(let q=0;q<c.length;q++){ if(!/\d/.test(c[q]))continue; const t=c.slice(0,q)+c.slice(q+1); if(!/\d/.test(t))continue;
       const try_=cells.slice(); try_[j]=t; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } }
+  // the three readings disagree on a cell, or one glyph was misread (0/8, 3/8, 5/6, 1/7): try each candidate for each
+  // cell — if exactly one of them makes the row add up to its total, the total proves it
+  if(!fixes.size){ const SW={'0':'89','8':'03','3':'8','5':'69','6':'5','9':'05','1':'7','7':'1'};   // 9/0/5 too: a cursor over a digit
+    // first what another reading actually saw; only if that settles nothing, a one-glyph swap
+    for(const swaps of [false,true]){ if(fixes.size)break;
+      for(const base of [...out,m0]) for(let j=0;j<10;j++){ const cand=new Set(out.map(o=>o[j]).filter(Boolean)); const c=base[j];
+        if(swaps&&c) for(let q=0;q<c.length;q++) for(const r of (SW[c[q]]||'')) cand.add(c.slice(0,q)+r+c.slice(q+1));
+        for(const v of cand){ if(v===base[j])continue; const try_=base.slice(); try_[j]=v; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } } } }
   if(fixes.size===1) return {cells:JSON.parse([...fixes][0]),ok:true};
+  // the parts agree but the total doesn't fit: read the Total cell alone, larger, digits only
+  if(!fixes.size){ await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789,.%'});
+    const tt=[]; for(const md of ['bw','inv']){ tt.push((await worker.recognize(crop(img,TRIGHT[10]-190,y-28,200,56,4,md))).data.text.replace(/[^\d,.%]/g,'')); }
+    await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:''});   // rows are read line by line
+    for(const base of [m0,...out]) for(const t of tt){ if(!t)continue; const try_=base.slice(); try_[10]=t; if(rowOk(try_))return {cells:try_,ok:true}; }
+    // the yellow Total digits: 5 can come out as 9 — exactly one swap that makes the row add up is proof
+    const S2={'0':'8','8':'03','3':'8','5':'69','6':'5','9':'5','1':'7','7':'1'}, ok2=new Set();
+    for(const t of tt) for(let q=0;q<t.length;q++) for(const r of (S2[t[q]]||'')){ const v=t.slice(0,q)+r+t.slice(q+1), try_=m0.slice(); try_[10]=v; if(rowOk(try_))ok2.add(JSON.stringify(try_)); }
+    if(ok2.size===1) return {cells:JSON.parse([...ok2][0]),ok:true}; }
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
 }
@@ -628,6 +721,17 @@ async function processTotals(img){
   totals.rows=rows; totals.area=area; renderTotals();
   const bad=rows.filter(r=>!r.ok).length;
   setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
+  checkRelic();
+}
+// the relic's unlocked bonuses must appear in the Relic column of Total Stats (read independently): a bonus that
+// isn't there is a misread — mark the relic "to check" instead of letting it pass
+function checkRelic(){
+  if(!relic.stats||!relic.stats.length||!totals.rows||!totals.rows.length)return;
+  const col=totals.rows.filter(r=>r.ok&&r.cells[8]).map(r=>r.cells[8]); if(!col.length&&totals.rows.some(r=>!r.ok))return;
+  const bad=relic.stats.filter(([n,v])=>{ const x=tnum(v); if(x===null||isNaN(x))return false;
+    return !col.some(c=>tnum(c)===x&&/%/.test(c)===/%/.test(v)); });
+  relic.doubt=bad.length>0;
+  if(bad.length)setBadgeId('rBadge','warn',`${bad.length} bonus${bad.length>1?'es':''} to check`);
 }
 function setTBadge(c,t){const b=document.getElementById('tBadge');b.className='badge '+c;b.textContent=t;}
 function tErr(msg){const e=document.getElementById('tErr');e.innerHTML='⚠ '+msg;e.style.display='block';setTBadge('bad','wrong screenshot');
@@ -662,10 +766,15 @@ const MROWS=[249,395,541,687,833,979];
 const mast={img:null,counts:null};
 function countMasteries(img){
   const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
-  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
-  return MTREES.map(([name,,xs])=>{let lit=0;MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{if(ri===0&&(ci===0||ci===3))return;
-    let n=0,t=0;for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){const k=(Math.round((y+dy)*s)*W+Math.round((x+dx)*s))*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;}
-    if(n/t>0.12)lit++;}));return [name,lit];});   // lit nodes measure 24–49 %, dark ones ~0 %
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,H=c.height,d=g.getImageData(0,0,c.width,c.height).data;
+  const lit=(x,y)=>{ let n=0,t=0; for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){ const X=Math.round((x+dx)*s),Y=Math.round((y+dy)*s); if(X<0||Y<0||X>=W||Y>=H){t++;continue;}
+      const k=(Y*W+X)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;} return n/t; };
+  // the node grid may sit a little off (small screens, a rough fit): slide it until the nodes line up best — lit nodes then
+  // show 24–49 % colour and dark ones ~0 %, and the grid that gives the clearest split is the right one
+  return MTREES.map(([name,,xs])=>{ let best=null;
+    for(let ox=-30;ox<=30;ox+=6)for(let oy=-30;oy<=30;oy+=6){ const v=[]; MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{ if(ri===0&&(ci===0||ci===3))return; v.push(lit(x+ox,y+oy)); }));
+      const score=v.reduce((a,b)=>a+(b>0.12?b:-b),0); if(!best||score>best.score)best={score,v}; }
+    return [name,best.v.filter(x=>x>0.12).length]; });
 }
 function processMasteries(img){
   const counts=countMasteries(img); let use=counts.filter(c=>c[1]>0).map(c=>c[0]); if(!use.length)use=['Offense','Defense'];
@@ -676,7 +785,9 @@ function processMasteries(img){
   document.getElementById('mDrop').style.display='none'; document.getElementById('mErr').style.display='none';
   document.getElementById('mView').style.display='flex'; document.getElementById('mImg').src=mast.img;
   document.getElementById('mCnt').innerHTML=counts.map(([n,v])=>`${n}: <b>${v}</b>`).join('<br>');
-  setBadgeId('mBadge','ok','read ✓'); document.getElementById('mpanel').classList.add('filled');
+  // game rules: masteries use at most 2 trees and at most 15 picks — anything else is a misread
+  const tot=counts.reduce((a,c)=>a+c[1],0), trees2=counts.filter(c=>c[1]>0).length, mBad=tot>15||trees2>2;
+  setBadgeId('mBadge',mBad?'warn':'ok',mBad?'counts to check':'read ✓'); mast.doubt=mBad; document.getElementById('mpanel').classList.add('filled');
 }
 function setBadgeId(id,c,t){const b=document.getElementById(id);b.className='badge '+c;b.textContent=t;}
 function clearMasteries(){mast.img=null;mast.counts=null;const p=document.getElementById('mpanel');p.classList.remove('filled');
@@ -718,10 +829,37 @@ function affinityByColor(px){ // the icon sits just left of the champion name; t
   for(let x=x0;x<x0+40;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
     if(r>130&&b>130&&g<100)c.Void++; else if(b>r+40&&b>g)c.Magic++; else if(r>g+60&&r>b+60)c.Force++; else if(g>r+40&&g>b)c.Spirit++;}
   const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>12?best[0]:''; }
+// names in the game are a closed list: a misread name is put right only when exactly one known name is clearly closest
+const RELICS=['Volcardiac Heart','Hallowed Hilt','Aspect of Siroth','Wand of Submission','Gilded Dragonstone','Demonic Effigy','Golden Elixir','Unholy Grail','Mask of Rage','Journal of Necrotos','Rod of Blasphemy',
+ 'Stormcaller','Chronocube','Gorecrescent','Hand of Uncreation','Scroll of the Unseen','Orb of Transfixion','Irethi Coronet','Malefic Talon','Diadem of Undeath','Tempus Sanguinis','Molten Deathbell',
+ 'Murderfang','Chrysalid of Rebirth','Essence Quencher','Temporal Stagnator','Infernosphere',"Valkanen's Grasp",'The Fleshrender','Blackshroud Fan',
+ 'Infernal Polytope','The Deathdealer','Harp of Kasbiel','Ax Serpentis','Preserved Aberration','Moondeath Orchid','Royal Digit','Draught of Ire',
+ "The Cat's Gaze","Hatter's Reserve",'Covetous Passion','Crown of Corruption','Skull of Treason','Gilded Pinion','Grail of Agony','Gaze of Damnation','Tempus Morbidia',"Sinner's Cloak",
+ 'Stars of the Jiinang',"Xibia's Servitude",'Last Laugh Amulet','Mask of Disquiet',"Exuzar's Totem","Saint Zavier's Tribute",'Thunderous Circlet','Jaws of Hatred',
+ 'Diabolical Dice','The Towerhelm','Thunderbolt Spear','Okulos Kustodion','Howling Guardians',"Darksmile's Toast",'Vigor Mortis','Sigil of the Akar',
+ 'Torch of Thralldom','Mind of Marquat','Eternal Soulgaol','The Collective','Hammer of Ending','Perched Shadow','Arachnelixir','Codex Luminis',
+ 'Lens of Intangibility','Coronet of Gloom','Soulmar Crystal','Sporeburst Rod','Compass of Anaxia','Revolting Seedling','Steel-Eyed Cutter',"Hoarder's Cauldron",
+ 'Dreadbomb','Immortal Visage','Bane of Sintranos','Blades of Akumori',"The Exile's Crown","Andromeda's Diadem",'Pyros Malleos','Frostspawn Cocoon',
+ 'Lifespring Skull','Sempiternal Anchor','Bloatshield Totem','Gauntlet of Ruin','Fleshmelter Lash','Sibilant Gold'];
+const BLESSINGS=['Indomitable Spirit','Miracle Heal','Iron Will','Heavencast','Intimidating Presence','Lightning Cage','Dark Resolve','Phantom Touch','Cruelty','Lethal Dose','Temporal Chains','Ward of the Fallen',
+ "Hero's Soul",'Faultless Defense','Commanding Presence','Inspiring Presence','Chainbreaker','Life Harvest','Soul Reap','Emergency Heal','Survival Instinct','Crushing Rend','Incinerate','Brimstone','Polymorph','Carapace',
+ "Nature's Wrath",'Harmonic Impulse',"Nature's Bounty",'Nourish','Neutralize','Cracking Roots'];
+const SETS=['Life','Offense','Defense','Speed','Critical Rate','Critical Damage','Accuracy','Resistance','Lifesteal','Fury','Daze','Cursed','Frost','Frenzy','Regeneration','Immunity','Shield','Relentless','Savage',
+ 'Destroy','Stun','Toxic','Taunting','Retaliation','Avenging','Stalwart','Reflex','Curing','Cruel','Immortal','Divine Offense','Divine Critical Rate','Divine Life','Divine Speed','Swift Parry','Deflection',
+ 'Resilience','Perception','Affinitybreaker','Untouchable','Fatal','Frostbite','Bloodthirst','Guardian','Fortitude','Lethal','Protection','Stone Skin','Killstroke','Instinct','Bolster','Defiant','Impulse',
+ 'Zeal','Righteous','Supersonic','Merciless','Slayer','Feral','Pinpoint','Stonecleaver','Rebirth','Chronophage','Mercurial','Refresh','Cleansing','Bloodshield','Reaction','Revenge'];
+// returns the known name, or null when nothing is close enough or two names are equally close (then: ask to check)
+function snapName(t,LIST){ if(!t)return null; const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), a=L(t); if(a.length<3)return null;
+  // a long name can wrap onto a second line that the reading misses ("Intimidating" of "Intimidating Presence"):
+  // a clear start of exactly one name is enough
+  if(a.length>=7){ const pre=LIST.filter(n=>L(n).startsWith(a)); if(pre.length===1)return pre[0]; }
+  let best=null,bd=99,second=99; for(const n of LIST){ const d=lev(a,L(n)); if(d<bd){second=bd;bd=d;best=n;} else if(d<second)second=d; }
+  const tol=Math.max(1,Math.round(L(best).length*0.3)); return bd<=tol&&second>bd?best:null; }
 const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
 function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
-function snapFaction(t){if(!t)return '';let best=['',99];FACTIONS.forEach(f=>{const v=lev(t,f);if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
+function snapFaction(t){if(!t)return '';let best=['',99];const L=x=>x.toLowerCase().replace(/[^a-z]/g,'');FACTIONS.forEach(f=>{const v=lev(L(t),L(f));   // spaces and stray marks don't count ("Ba nner'Lo nd Ss")
+if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
 function avgColor(px,x0,y0,x1,y1){let r=0,g=0,b=0,n=0;for(let x=x0;x<x1;x+=2)for(let y=y0;y<y1;y+=2){const p=px(x,y),mx=Math.max(...p),mn=Math.min(...p);if(mx<150||mx-mn<90)continue;r+=p[0];g+=p[1];b+=p[2];n++;}return n?[r/n,g/n,b/n]:[0,0,0];}
 async function readChampDetails(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -730,30 +868,42 @@ async function readChampDetails(img){
   const fac=snapFaction((await worker.recognize(crop(img,490,255,215,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim());
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const rar=rarityByColor(avgColor(px,1162,104,1306,134)), aff=affinityByColor(px);
-  // portrait = roster cell with the bright green selection frame
-  const xs=[30,137,244,351], ys=[185,318,451,584,717]; let best=[0,0,0];
-  ys.forEach((y0,yi)=>xs.forEach((x0,xi)=>{let n=0;for(let x=x0;x<x0+102;x+=2)for(const y of [y0+1,y0+3,y0+122,y0+124]){const [r,g,b]=px(x,y);if(g>200&&r<120&&b<120)n++;} if(n>best[0])best=[n,xi,yi];}));
-  const portrait=best[0]>60?cropURL(img,xs[best[1]]+3,ys[best[2]]+3,97,119):'';
+  // portrait = roster cell inside the bright green selection frame. The roster scrolls, so the frame is found
+  // wherever it is: rows/columns of the left panel that hold a long green line are the frame's edges
+  const G=(x,y)=>{const [r,g,b]=px(x,y);return g>200&&r<120&&b<120;}, rowsG=[], colsG=new Array(470).fill(0);
+  for(let y=140;y<1000;y++){let n=0;for(let x=15;x<470;x++)if(G(x,y)){n++;colsG[x]++;} rowsG.push(n);}
+  const ey=rowsG.map((n,i)=>n>=60?i+140:-1).filter(v=>v>=0);
+  let portrait='';
+  if(ey.length){ const top=ey[0], bot=ey.filter(v=>v-top<160).pop();
+    const cnt=new Array(470).fill(0); for(let x=15;x<470;x++)for(let y=top;y<=bot;y++)if(G(x,y))cnt[x]++;
+    const ex=cnt.map((n,i)=>n>=60?i:-1).filter(v=>v>=0);
+    if(ex.length&&bot-top>90&&bot-top<150){ const l=ex[0], r=ex.filter(v=>v-l<130).pop();
+      if(r-l>75&&r-l<120) portrait=cropURL(img,l+3,top+3,r-l-5,bot-top-5); } }
   Object.assign(champ,{role:/^(Attack|Defense|Support|HP)$/i.test(role)?role:champ.role||'',faction:fac||champ.faction||'',rarity:rar||champ.rarity||'',affinity:aff||champ.affinity||'',portrait:portrait||champ.portrait||''});
 }
 function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
-  if(top===null)return 0; let runs=0,prev=false; for(let x=x0;x<x1;x++){let on=false;for(let y=top;y<top+4;y++){const [r,g,b]=px(x,y);if(r>200&&g>140&&b<100){on=true;break;}} if(on&&!prev)runs++;prev=on;} return Math.min(runs,6);}
+  if(top===null)return 0;
+  // count the stars row by row through their wide middle (each row its own count — merging rows bridges the small gaps
+  // between overlapping stars) and take the count most rows agree on
+  const rowCount=y=>{ let runs=0,w=0; for(let x=x0;x<=x1;x++){ const [r,g,b]=x<x1?px(x,y):[0,0,0]; if(r>190&&g>130&&b<110)w++; else { if(w>=3)runs++; w=0; } } return runs; };
+  const votes={}; for(let y=top+6;y<=top+12;y++){ const c=rowCount(y); if(c>0&&c<=6)votes[c]=(votes[c]||0)+1; }
+  const best=Object.entries(votes).sort((a,b)=>b[1]-a[1]||b[0]-a[0])[0]; return best?+best[0]:0; }
 async function heroFromHeader(img,from){
-  const {head,stars}=prep(img);
+  const {head,stars,starsPink,starsGold}=prep(img);
   await worker.setParameters({tessedit_pageseg_mode:'7'});
   const txt=(await worker.recognize(head)).data.text;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
-  if(!hero.name) setHero({name:m[1].trim(),lvl:m[2],stars},from);
-  else if(!hero.stars&&stars){hero.stars=stars;drawStars();}
+  voteHero(m[1].trim(),m[2],stars,from,starsPink,starsGold);
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
   { const clean=t=>t.replace(/[^A-Za-z' \-]/g,'').replace(/\s+/g,' ').trim().replace(/\bl(?=[^aeiouy\s])/g,'I');   // capital I read as l
     const score=t=>t.split(' ').filter(w=>/^[A-Z][a-z']+$/.test(w)||/^(of|the)$/.test(w)).length*2-t.split(' ').length;   // relic names are Title Case
     const a=clean((await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text), b=clean((await worker.recognize(crop(img,1495,245,405,45,2,'inv'))).data.text);
-    relic.name=score(b)>score(a)?b:a; }
+    const sa=snapName(a,RELICS), sb=snapName(b,RELICS);
+    relic.name=sa||sb||(score(b)>score(a)?b:a); relic.nameDoubt=!(sa||sb); }
   relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1')
     .replace(/^\+4(\d{2})$/,'+$1');                                              // '+' read as '4': "+415" -> "+15"
   await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -780,7 +930,11 @@ async function processRelic(img){
     if(nm||val)relic.stats.push([nm,val]);
   }
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').trim();
+  { // two differently prepared readings; keep the one with fewer junk words, then tidy the [Buff] brackets
+    const fix=t=>t.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').replace(/[|(\[]([A-Z][a-z]+(?: [A-Z][a-z]+)?)[|!)\]]/g,'[$1]').replace(/\s+([.,%)])/g,'$1').trim();
+    const junk=t=>t.split(/\s+/).filter(w=>w&&!/^[\[(]?[A-Za-z][a-z']*[\])]?[.,:;]?$|^[\[(]?[A-Z][A-Za-z.]*[\])]?[.,]?$|^[+-]?\d+%?[).,]?$|^\(stacks$|^\d+%\)\.?$/.test(w)).length;
+    const r1=fix((await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text), r2=fix((await worker.recognize(crop(img,1455,605,425,190,3,'bw'))).data.text);
+    relic.desc=junk(r2)<junk(r1)?r2:r1; }
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
   await readChampDetails(img); await heroFromHeader(img,'Relic');
@@ -789,7 +943,8 @@ async function processRelic(img){
   {const fc={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'}[relic.rarity]||'#2a3448'; const ri=document.getElementById('rImg'); ri.style.border='3px solid '+fc; ri.style.boxShadow='0 0 12px '+fc+'88';}
   document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
   document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:${/Lvl/.test(v)?'#8a93a6':'#5fd16a'}">${v}</b>`).join(' · ')}`;
-  setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
+  setBadgeId('rBadge',relic.nameDoubt?'warn':'ok',relic.nameDoubt?'name to check':'read ✓'); document.getElementById('rName').classList.toggle('bad',!!relic.nameDoubt); document.getElementById('rpanel').classList.add('filled');
+  checkRelic();
 }
 async function processBlessing(img){
   await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -800,13 +955,17 @@ async function processBlessing(img){
     const w=(data.words||[]).find(w=>/bless/i.test(w.text)); if(w)bx=1440+(w.bbox.x0+w.bbox.x1)/2/k;
     await worker.setParameters({tessedit_pageseg_mode:'7'}); }
   bless.name='';
-  for(const m of ['bw','inv']){ if(bless.name.length<3) bless.name=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim(); }
+  let bRaw=''; for(const m of ['bw','inv']){ const t=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim();
+    const sn=snapName(t,BLESSINGS); if(sn){ bless.name=sn; break; } if(!bRaw&&t.length>=3)bRaw=t; }
+  // an empty Blessing slot (just the "+" sign) gives no word at all: the champion simply has no Blessing yet
+  bless.none=!bless.name&&!/[A-Za-z]{4,}/.test(bRaw);
+  bless.doubt=!bless.name&&!bless.none; if(!bless.name&&!bless.none)bless.name=bRaw;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
   bless.img=cropURL(img,Math.round(bx-88),788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
   refreshBlessNote();
-  setBadgeId('bBadge','ok','read ✓'); document.getElementById('bpanel').classList.add('filled');
+  setBadgeId('bBadge',bless.doubt?'warn':'ok',bless.doubt?'name to check':bless.none?'no Blessing':'read ✓'); if(bless.none)document.getElementById('bName').value='— none —'; document.getElementById('bName').classList.toggle('bad',!!bless.doubt); document.getElementById('bpanel').classList.add('filled');
 }
 function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
   [p+'View',p+'Err'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(p+'Drop').style.display='';setBadgeId(p+'Badge','','empty');}
@@ -849,7 +1008,7 @@ function buildCard(){
     return `<div class="gc"><div class="gtop">${d.icon?`<img src="${d.icon}">`:'<div class="ph"></div>'}<div class="gm"><div class="sl">${slot}</div>
       <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
       ${d.name?`<div class="setn">${esc(d.name)}</div>`:''}${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
-  const stars='★'.repeat(hero.stars||0);
+  const stars=[1,2,3,4,5,6].map(i=>{const c=starColor(i);return c?`<span style="color:${c}">★</span>`:'';}).join('');
   const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
   const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
   const cls=j=>j===9?'ar':(j===10?'tot':'');
@@ -874,7 +1033,7 @@ function buildCard(){
       <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div${/Lvl/.test(v)?' class="lk"':''}>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
       <div style="flex:1;display:flex;align-items:center"><div class="rd">${esc(relic.desc)}</div></div><img class="sets" src="${relic.sets}">`:`<div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center"><b>Relic</b>not added yet</div>`;
   const blessBody=bless.name?`<div class="brow"><img src="${bless.img}"><div><div class="bl2">Blessing</div><div class="bn">${esc(bless.name)}</div><div class="bs">${bstars}</div></div></div>`
-      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">not added yet</div><div class="bs">${bstars}</div></div></div>`;
+      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">${bless.none?'none yet':'not added yet'}</div><div class="bs">${bless.none?'':bstars}</div></div></div>`;
   return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
@@ -931,7 +1090,43 @@ function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge
 function handle(el,f){
   const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
 }
+// an item screenshot whose slot could not be seen: once the rest of its batch is done, if exactly one item slot is
+// still free and exactly one item screenshot is left without a slot, that is where it belongs
+// Items vs Total Stats: for stats that only come as flat numbers (C. RATE, C. DMG, RES, ACC) the "Artifacts" column of
+// Total Stats is the sum of what the nine items give (main stat, ascension, substats, glyphs) plus set bonuses, and
+// set bonuses only add. Items adding up to MORE than the column is a misread: mark those values "to check". Items
+// adding up to less with exactly one one-glyph swap (1/7, 0/8, 3/8, 5/6) making it exact: the column proves the fix.
+function crossItems(){
+  if(!totals.rows||!totals.rows.length||!SLOTS.every(x=>state[x]))return;
+  const n=v=>{const m=String(v||'').match(/^\+?(\d+)%?$/);return m?+m[1]:0;}, SW={'0':'8','8':'03','3':'8','5':'6','6':'5','1':'7','7':'1'};
+  for(const st of ['C. RATE','C. DMG','RES','ACC']){ const row=totals.rows[TROWS.indexOf(st)]; if(!row||!row.ok)continue;
+    const col=n(row.cells[1]); if(!row.cells[1]&&row.cells[10]!==row.cells[0])continue;
+    const parts=[]; for(const sl of SLOTS){ const it=state[sl];
+      if(it.main&&it.main.s===st)parts.push({sl,o:it.main,k:'v'});
+      if(it.asc&&it.asc.s===st)parts.push({sl,o:it.asc,k:'v'});
+      (it.subs||[]).forEach(x=>{ if(x.s===st){ parts.push({sl,o:x,k:'v',sub:1}); if(x.g)parts.push({sl,o:x,k:'g'}); } }); }
+    const sum=parts.reduce((a,p)=>a+n(p.o[p.k]),0);
+    if(sum===col){ for(const p of parts) if(p.o.sure===false){ p.o.sure=true; refill(p.sl); } continue; }   // adds up exactly: proven
+    const fixes=[]; for(const p of parts){ const v=String(p.o[p.k]||''); for(let q=0;q<v.length;q++) for(const r of (SW[v[q]]||'')){
+      const t=v.slice(0,q)+r+v.slice(q+1); if(sum-n(v)+n(t)===col&&(!p.sub||subPossible(st,t,p.o.g)))fixes.push({p,t}); } }
+    if(sum<col&&fixes.length!==1)continue;              // the rest is set bonuses
+    if(fixes.length===1){ const {p,t}=fixes[0]; p.o[p.k]=t; p.o.sure=true; refill(p.sl); continue; }
+    for(const p of parts){ p.o.sure=false; refill(p.sl); } }
+}
+function refill(sl){ const el=document.querySelector(`.slot[data-slot="${sl}"]`); fill(el,state[sl],el.querySelector('.raw').textContent); }
+const PENDING=[];
+function resolvePending(){
+  for(let i=PENDING.length-1;i>=0;i--){ const job=PENDING[i], b=job.batch;
+    if(queue.some(q=>q.batch===b&&q.unknown))continue;                     // the batch is still being sorted
+    const mine=PENDING.filter(j=>j.batch===b), free=SLOTS.filter(x=>!b.used[x]);
+    if(mine.length===1&&free.length===1){ const hl=free[0], el2=document.querySelector(`.slot[data-slot="${hl}"]`); b.used[hl]=1;
+      if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:job.img,prepped:true,normalized:true}); badge(el2,'busy','queued');
+      if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (the only item slot left)`;} }
+    else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: item screenshot, but its slot could not be told — drop it on the right slot`; }
+    PENDING.splice(i,1); }
+}
 async function pump(){
+  resolvePending(); if(!busy&&!queue.length)crossItems();
   if(busy||!worker||!queue.length)return; busy=true;
   const job=queue.shift();
   if(!job.prepped&&!job.normalized){ try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
@@ -945,7 +1140,8 @@ async function pump(){
             if(job.batch&&job.batch.used[hl]){ if(job.tag){job.tag.className='no';job.tag.textContent=`✗ ${job.name}: second ${hl} — skipped`;} }
             else { if(job.batch)job.batch.used[hl]=1; if(el2.classList.contains('filled'))clearSlot(el2);
               queue.unshift({el:el2,img,prepped:true,normalized:true}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl}`;} }
-            busy=false; pump(); return; } }
+            busy=false; pump(); return; }
+          if(job.kindGuess==='item'&&job.batch){ PENDING.push(job); if(job.tag)job.tag.textContent=`… ${job.name}: item, slot to be worked out`; busy=false; pump(); return; } }
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
         if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
           if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
@@ -962,13 +1158,13 @@ async function pump(){
             else queue.unshift({unknown:true,img:img2,tag:job.tag,name:job.name,normalized:true}); }
           else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; } }
         else if(job.kindGuess==='relic'||job.kindGuess==='skills'){ await readChampDetails(img); await heroFromHeader(img,'champion screen'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${job.name}: champion details (name, rarity, faction, role)`;} }
-        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — for the Blessing, open the champion from your own roster (Skills tab), not from the Champion Index`; }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — it doesn't look like one of the 13 game screens (items, Total Stats, Relic, Skills, Masteries)`; }
       }
     }catch(err){console.error(err);}
     busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
   try{
     badge(el,'busy','reading…'); setStatus(`Reading ${el.dataset.slot}…`);
-    const {bw,icon,valCrop,head,stars}=prep(img);
+    const {bw,icon,valCrop,head,stars,starsPink,starsGold}=prep(img);
     el.querySelector('.thumb img').src=icon;
     const {data}=await worker.recognize(bw);
     const item=parse(data.text);
@@ -977,6 +1173,8 @@ async function pump(){
     await worker.setParameters({tessedit_char_whitelist:''});
     mergeNums(item,nums);
     await rowCheck(img,item);
+    await mainCheck(img,item);
+    item._empty=[0,1,2,3].map(i=>rowBlank(img,i));
     await worker.setParameters({tessedit_pageseg_mode:'7'});
     const ht=(await worker.recognize(head)).data.text;
     await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -985,7 +1183,7 @@ async function pump(){
       if(img2){ queue.unshift({el,img:img2,normalized:true}); busy=false; pump(); return; } }
     if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
     if(bad){ showErr(el,bad,img); }
-    else { applyHero(el,ht,stars); fill(el,item,data.text); }
+    else { applyHero(el,ht,stars,starsPink,starsGold); fill(el,item,data.text); }
   }catch(err){badge(el,'warn','error');console.error(err);}
   busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump();
 }
@@ -1021,10 +1219,25 @@ function prep(img){
   // red stars: count runs of strongly red columns across the header band
   const sc=document.createElement('canvas'); const sw=Math.round(900*s), sh=Math.round(35*s);
   sc.width=sw; sc.height=sh; const sg=sc.getContext('2d'); sg.drawImage(img,520*s,25*s,900*s,35*s,0,0,sw,sh);
-  const sd=sg.getImageData(0,0,sw,sh).data; let runs=0,prev=false; const need=Math.max(3,Math.round(4*s));
-  for(let x=0;x<sw;x++){let n=0;for(let y=0;y<sh;y++){const k=(y*sw+x)*4;if(sd[k]>200&&sd[k+1]<75&&sd[k+2]<75)n++;}
-    const on=n>=need; if(on&&!prev)runs++; prev=on;}
-  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:Math.min(runs,6)};
+  const sd=sg.getImageData(0,0,sw,sh).data; const need=Math.max(3,Math.round(4*s));
+  // star colours in the game: red = awakened, pink = ascended (not yet awakened), yellow = neither
+  const isRed=(r,g,b)=>r>200&&g<75&&b<75, isPink=(r,g,b)=>r>165&&g>55&&g<150&&b>140&&r>g+70, isGold=(r,g,b)=>r>200&&g>150&&b<100;
+  // runs of star-coloured columns, each labelled by its main colour; the stars are the group of runs at the right end of the
+  // header (the purple faction mark left of the name is not part of it)
+  const runs=[]; let cur=null;
+  for(let x=0;x<=sw;x++){ let nr=0,np=0,ng=0; if(x<sw)for(let y=0;y<sh;y++){const k=(y*sw+x)*4,r=sd[k],g=sd[k+1],b=sd[k+2]; if(isRed(r,g,b))nr++; else if(isPink(r,g,b))np++; else if(isGold(r,g,b))ng++;}
+    const c=nr>=need&&nr>=np&&nr>=ng?'r':np>=need&&np>=ng?'p':ng>=need?'g':null;   // one colour must fill the column by itself
+    if(c&&cur&&cur.c===c){ cur.b=x; } else { if(cur)runs.push(cur); cur=c?{a:x,b:x,c}:null; } }
+  const grp=[]; for(let i=runs.length-1;i>=0;i--){ const r=runs[i]; if(grp.length){ const nxt=grp[0], w=nxt.b-nxt.a+1; if(nxt.a-r.b>w*2.5)break; } grp.unshift(r); }
+  const col=r=>r.c;
+  // small stars can touch with no gap at all: a run twice as wide as one star is two stars
+  const ws=grp.map(r=>r.b-r.a+1).sort((a,b)=>a-b), unit=ws.length?ws[Math.floor((ws.length-1)/2)]:1;
+  const st=[]; grp.forEach(r=>{ const n=Math.max(1,Math.round((r.b-r.a+1)/unit)); for(let i=0;i<n;i++)st.push(col(r)); });
+  // how many stars: from the runs; which colour: from how much of the stars' width each colour covers (touching stars of
+  // one colour can't be told apart by gaps, but their share of the width still adds up)
+  const total=Math.min(6,st.length), cwid={r:0,p:0,g:0}; grp.forEach(r=>cwid[r.c]+=r.b-r.a+1); const all=cwid.r+cwid.p+cwid.g||1;
+  let red=Math.round(total*cwid.r/all), gold=Math.round(total*cwid.g/all); if(red+gold>total)gold=total-red; const pink=total-red-gold;
+  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:red,starsPink:pink,starsGold:gold};
 }
 
 /* ---------- parsing ---------- */
@@ -1067,12 +1280,14 @@ function splitGlyph(raw,stat){
   return {v:raw,g:'',sure:false};
 }
 function parse(text){
+  // only "C." ever stands before DMG / RATE: whatever the reader made of that C ("¢.", "Cc.", "©.") is a C
+  text=text.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1');
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
   const it={set:'',name:'',main:null,asc:null,subs:[]};
   // special accessories carry their own name in the title ("Revenge Amulet"); standard ones just say "Amulet"
   { const m=(lines[0]||'').match(/((?:[A-Z][a-z']+\s+){1,3})(Ring|Amulet|Banner)\b/); if(m) it.name=(m[1]+m[2]).trim(); }
   for(const ln of lines){
-    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){it.set=m[1].replace(/\s+x$/i,'').trim();continue;}
+    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){ const raw=m[1].replace(/\s+x$/i,'').trim(); const sn=snapName(raw,SETS); it.set=sn||raw; it.setDoubt=!sn&&!!raw; continue;}
     if(!it.main){
       // main line: "... +16] ATK 265 ATK 80" / "HP 600" — first stat+number pair(s) on the line
       const re=new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'); const pairs=[...ln.matchAll(re)];
@@ -1131,31 +1346,80 @@ function showErr(el,e,img){
     const target=document.querySelector(`.slot[data-slot="${b.dataset.to}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
     queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }));
 }
-function applyHero(el,txt,stars){
+function applyHero(el,txt,stars,pink,gold){
   el._hero=null;
   const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');           // drop the "2,191/2,200" storage counter
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i);
   const mis=el.querySelector('.mis'); mis.style.display='none';
   if(!m)return;
   const name=m[1].trim(), lvl=m[2]; el._hero={name,lvl,stars};
-  if(!hero.name){
-    setHero({name,lvl,stars},el.dataset.slot);
-  }else if(name.toLowerCase()!==hero.name.toLowerCase()){
+  voteHero(name,lvl,stars,el.dataset.slot,pink,gold);
+  // a different champion, not a misread letter ("Ninia" for Ninja)
+  if(hero.name&&lev(name.toLowerCase(),hero.name.toLowerCase())>Math.max(2,Math.round(hero.name.length*0.3))){
     mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
   }
+}
+// is a substat row of the item window blank (no light text pixels anywhere on it)?
+function rowBlank(img,i){
+  const c=crop(img,20,[170,202,235,268][i]-14,460,28,1), g=c.getContext('2d'), d=g.getImageData(0,0,c.width,c.height).data; let n=0;
+  for(let k=0;k<d.length;k+=4){ if(d[k]*.3+d[k+1]*.59+d[k+2]*.11>150)n++; }
+  return n<c.width*c.height*0.004;
+}
+// generous upper limit of a substat's base value (start + 4 upgrades, rolls rounded up): anything above is a misread
+const SUBMAX={'ATK%':40,'HP%':40,'DEF%':40,'SPD':40,'C.RATE':40,'C. RATE':40,'C.DMG':45,'C. DMG':45,'ACC':80,'RES':80,'ATK':200,'DEF':200,'HP':2500};   // mythical items roll higher (HP(3) 1632 seen)
+function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if(isNaN(n))return false;
+  const k=(stat||'').toUpperCase(), key=['ATK','HP','DEF'].includes(k)&&pct?k+'%':k; const mx=SUBMAX[key]; return mx===undefined||n<=(glyph?mx/2:mx); }
+// second reading of the main line alone (main stat + ascension bonus): a value the two readings disagree on is
+// shown as "to check" instead of passing silently ("ATK 80" read as "ATK 8")
+async function mainCheck(img,it){
+  if(!it.main)return;
+  const norm=t=>t.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1').replace(/(\d)[Oo]/g,'$10').replace(/(\d)[Oo]/g,'$10');   // "ATK8O" is ATK 80
+  const read=async mode=>{ const t=norm((await worker.recognize(crop(img,140,120,380,34,3,mode))).data.text);
+    const P=[...t.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))]; const v=P.map(p=>p[2]); v.stats=P.map(p=>normStat(p[1])); return v; };
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  try{ const r1=await read('inv'); if(!r1.length)return; let r2=null;
+    // settle each value by majority of three readings: the item text, and two readings of the main line alone
+    // an ascension bonus the item text missed: take it when both readings of the main line agree on it
+    if(!it.asc&&r1.length>=2){ r2=await read('bw'); if(r2.length>=2&&r2[1]===r1[1]&&r2.stats[1]===r1.stats[1]&&r1.stats[1])it.asc={s:r1.stats[1],v:r1[1]}; }
+    for(const [i,f] of [[0,it.main],[1,it.asc]]){ if(!f||!r1[i]||r1[i]===f.v)continue;
+      if(!r2)r2=await read('bw');
+      if(r2[i]===f.v)continue;                         // 2 : 1 for the first reading
+      if(r2[i]===r1[i]){ f.v=r1[i]; continue; }        // 2 : 1 against it
+      f.sure=false; }                                  // three different answers: ask to check
+  } finally { await worker.setParameters({tessedit_pageseg_mode:'6'}); }
 }
 // third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
 async function rowCheck(img,it){
   // used only as a referee: alone it is often wrong, so it never overrides two agreeing readings
   await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789+%'});
   try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
+    // a value or glyph no item can carry is a misread, even when the readings agree on it
+    // a value or glyph no item can carry is a misread, even when readings agree on it: take what another reading saw,
+    // if exactly one possible value was seen; otherwise ask to check
+    { const impV=sub.v&&!subPossible(sub.s,sub.v), impG=sub.g&&!subPossible(sub.s,sub.g,true);
+      if(impV||impG){
+        const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+        const r=t?splitGlyph(t,sub.s):null, seen=[{v:sub.nv,g:sub.ng},r||{}];
+        const pick=(key,glyph)=>{ const u=[...new Set(seen.map(c=>c[key]).filter(x=>x&&/^\d+%?$/.test(x)&&subPossible(sub.s,x,glyph)))]; return u.length===1?u[0]:null; };
+        let ok=true;
+        if(impV){ const v=pick('v',false); if(v)sub.v=v; else ok=false; }
+        if(impG){ const g=pick('g',true); if(g)sub.g=g; else ok=false; }
+        sub.sure=ok?undefined:false; if(!ok)continue; } }
     const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
     if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
     const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
     const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
     if(row===cur)continue;
-    if(dig!==null&&dig===row){ sub.v=row; sub.g=sub.ng||sub.g; sub.sure=true; continue; }   // outvoted 2:1
-    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur)))continue;             // a dropped digit is not a conflict
+    if(dig!==null&&dig===row){                                                           // outvoted 2:1 — but those two readings
+      // use similar crops, so a fourth, differently prepared reading decides: with the first → a tie, ask; else accept
+      const t4=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,4,'bw2'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+      const r4=t4?splitGlyph(t4,sub.s):null, v4=r4&&r4.v;
+      if(v4===cur){ sub.sure=false; continue; }
+      sub.v=row; sub.g=sub.ng||sub.g; sub.sure=v4===row?true:false; continue; }
+    // one reading has an extra digit ("77%" / "7%", "114" / "11"): a value no substat can reach is the wrong one;
+    // if both are possible, nobody can tell — ask to check
+    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur))){ const okC=subPossible(sub.s,cur), okR=subPossible(sub.s,row);
+      if(okC&&!okR)continue; if(okR&&!okC){ sub.v=row; continue; } }
     sub.sure=false;                                                                       // no majority → ask to check
   } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
 }
@@ -1182,13 +1446,15 @@ function fill(el,it,raw){
   const q=c=>el.querySelector(c); let issues=0;
   const set=(node,val,ok=true)=>{node.value=val||'';node.classList.toggle('bad',!ok);if(!ok)issues++;};
   const acc=!!ACC_MAIN[el.dataset.slot];
-  set(q('.f-set'),it.set,!!it.set||acc);   // standard faction accessories have no set
+  set(q('.f-set'),it.set,(!!it.set||acc)&&!it.setDoubt);   // standard faction accessories have no set
   q('.namerow').style.display=acc?'':'none'; set(q('.f-name'),acc?it.name:'');
   set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
-  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v));
-  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v);
+  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v)&&it.main.sure!==false);
+  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v,!(it.asc&&it.asc.sure===false));
   el.querySelectorAll('.row.sub').forEach((r,i)=>{
     const s=it.subs[i]||{};
+    // a substat row with no text at all in the picture is not missing — the item simply has fewer substats (+12 and lower)
+    if(!s.s&&!s.v&&i>=it.subs.length&&it._empty&&it._empty[i]){ set(r.querySelector('.f-ss'),''); set(r.querySelector('.f-sr'),''); set(r.querySelector('.f-sv'),''); set(r.querySelector('.f-sg'),''); return; }
     set(r.querySelector('.f-ss'),s.s,!!s.s);
     set(r.querySelector('.f-sr'),s.r);
     set(r.querySelector('.f-sv'),s.v,!!s.v&&s.sure!==false);

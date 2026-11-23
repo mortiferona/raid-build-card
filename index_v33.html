@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fragility Raid Shadow Legends Card</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cardo:wght@700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0f16;color:#d9dee8;font-family:Inter,system-ui,sans-serif;min-height:100vh;
+ background:radial-gradient(1000px 500px at 10% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 500px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
+.wrap{max-width:1300px;margin:0 auto;padding:28px 20px 100px}
+h1{font-family:Cardo,serif;font-size:40px;color:#f3e4bd;letter-spacing:1.5px}
+.sub{color:#8c97ae;margin-top:14px;font-size:15px}
+.myname{display:inline-flex;align-items:center;gap:12px;padding:4px 18px 6px;margin-right:10px;border:2px solid #e0452f;border-radius:8px;
+ color:#ffd9d2;letter-spacing:1.5px;background:linear-gradient(180deg,rgba(120,20,15,.75),rgba(50,8,6,.85));
+ box-shadow:0 0 0 1px rgba(255,140,110,.35) inset,0 0 18px rgba(224,69,47,.55),0 0 42px rgba(224,69,47,.25);text-shadow:0 0 10px rgba(255,90,70,.8);position:relative;vertical-align:middle}
+.myname::before,.myname::after{content:"";position:absolute;left:10px;right:10px;height:1px;background:linear-gradient(90deg,transparent,#ff8a70,transparent)}
+.myname::before{top:3px}.myname::after{bottom:3px}
+.myname i{font-style:normal;font-size:16px;color:#ff6b55;text-shadow:0 0 8px #ff3b2b}
+.howto{margin-top:18px;padding:14px 18px;border:1px solid #2a3448;border-radius:12px;background:rgba(18,24,35,.8);font-size:14px;line-height:1.7;color:#aeb6c6}
+.howto b{color:#f0cf7a}
+.status{margin-top:14px;font-size:14px;color:#7fd3c8;min-height:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.slot{border:1px solid #2a3448;border-radius:14px;background:rgba(18,24,35,.9);padding:14px;position:relative;outline:none}
+.slot.active{border-color:#c9a24a;box-shadow:0 0 0 2px rgba(201,162,74,.35)}
+.slot.drag{border-color:#7fd3c8;background:rgba(127,211,200,.08)}
+.sh{display:flex;justify-content:space-between;align-items:center}
+.sn{font-family:Cardo,serif;font-size:20px;color:#f3e4bd;letter-spacing:1px}
+.badge{font-size:12px;padding:3px 9px;border-radius:999px;background:#1b2333;color:#8c97ae}
+.badge.ok{background:rgba(95,209,106,.15);color:#7be07a}.badge.warn{background:rgba(224,178,74,.15);color:#f0cf7a}.badge.busy{background:rgba(127,211,200,.15);color:#9fe6dc}
+.drop{margin-top:10px;border:1.5px dashed #3a4660;border-radius:10px;padding:18px;text-align:center;color:#7f8aa3;font-size:13px;cursor:pointer;line-height:1.6}
+.drop:hover{border-color:#7fd3c8;color:#9fe6dc}
+.thumb{margin-top:10px;display:none;gap:10px;align-items:center}
+.thumb img.icon{width:64px;height:64px;border-radius:6px;border:1px solid #3a4660;object-fit:cover}
+.thumb button{margin-left:auto}
+button{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #3a4660;background:#1b2333;color:#c3cad8;cursor:pointer}
+button:hover{border-color:#7fd3c8;color:#fff}
+.form{margin-top:10px;display:none}
+.row{display:grid;grid-template-columns:1fr 46px 70px 60px;gap:5px;margin-top:5px;align-items:center}
+.row.main{grid-template-columns:1fr 70px 1fr 70px}
+.row label{font-size:11px;color:#7f8aa3;letter-spacing:1px;text-transform:uppercase}
+input,select{width:100%;font-family:inherit;font-size:13px;padding:5px 6px;border-radius:6px;border:1px solid #2e3850;background:#121825;color:#e8ecf3}
+input.glyph{color:#7be07a}input.asc{color:#d77cf2}
+input.bad,select.bad{border-color:#e0b24a;background:rgba(224,178,74,.08)}
+.setrow{display:grid;grid-template-columns:1fr;gap:5px}
+.hint{font-size:11px;color:#6f7a92;margin-top:6px}
+input[type=file]{display:none}
+.hero{margin-top:18px;display:flex;gap:18px;align-items:center;padding:16px 20px;border:1px solid #3b3150;border-radius:14px;background:linear-gradient(90deg,rgba(120,70,180,.16),rgba(18,24,35,.85))}
+.hero .hn{font-family:Cardo,serif;font-size:30px;color:#f3e4bd;letter-spacing:1px;background:none;border:none;padding:0;width:auto;min-width:200px}
+.hero .hl{width:70px}.hero .stars{color:#ff3b3b;font-size:24px;letter-spacing:2px;cursor:pointer;user-select:none}
+.hero .stars span.off{color:#3a4660}.hero .lbl{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7f8aa3}
+.hero .note{margin-left:auto;font-size:12px;color:#7f8aa3;text-align:right;max-width:280px}
+.mis{margin-top:8px;font-size:12px;color:#f0cf7a;display:none}
+.reset{position:fixed;top:16px;right:18px;z-index:10;display:flex;gap:8px;align-items:center}
+.reset .x{width:40px;height:40px;border-radius:50%;font-size:20px;line-height:1;padding:0;border:1px solid #5a3a3a;background:#2a1618;color:#ff8a8a}
+.reset .x:hover{background:#3a1c1f;border-color:#ff6b6b;color:#fff}
+.reset .ask{display:none;align-items:center;gap:8px;background:#1b2333;border:1px solid #3a4660;border-radius:10px;padding:6px 10px;font-size:13px}
+.reset .ask button.yes{border-color:#ff6b6b;color:#ff8a8a}
+.sx{display:none;position:absolute;top:-11px;right:-11px;z-index:2;width:28px;height:28px;border-radius:50%;padding:0;font-size:13px;line-height:1;border:1px solid #6a3a3a;background:#2a1618;color:#ff8a8a;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.sx:hover{background:#3a1c1f;border-color:#ff6b6b;color:#fff}
+.slot.filled .sx{display:inline-block}
+.err{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #6a3a3a;background:rgba(255,90,90,.08);color:#ffb3b3;font-size:13px;line-height:1.55}
+.err b{color:#fff}.err button{margin-top:8px;border-color:#7fd3c8;color:#9fe6dc}
+.badge.bad{background:rgba(255,90,90,.15);color:#ff9a9a}
+.bulk{margin-top:16px;border:2px dashed #c9a24a;border-radius:14px;padding:22px;text-align:center;cursor:pointer;background:rgba(201,162,74,.05);color:#e8d9b0;font-size:15px;line-height:1.6}
+.bulk:hover,.bulk.drag{background:rgba(201,162,74,.12);border-color:#f0cf7a}
+.bulk b{color:#f3e4bd;font-family:Cardo,serif;font-size:22px;letter-spacing:1px}
+.bulk small{color:#8c97ae;font-size:12px}
+.blog{margin-top:8px;font-size:13px;color:#aeb6c6;display:flex;flex-wrap:wrap;gap:6px}
+.blog span{padding:3px 9px;border-radius:999px;background:#1b2333}.blog span.ok{color:#7be07a}.blog span.no{color:#ff9a9a}
+ .tpanel{margin-top:22px;border:1px solid #2a3448;border-radius:14px;background:rgba(18,24,35,.9);padding:16px;position:relative}
+.tpanel.filled .sx{display:inline-block}
+.tpanel .tbl{display:none;margin-top:12px;overflow-x:auto}
+.tpanel table{border-collapse:collapse;width:100%;font-size:13px}
+.tpanel th{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:#7f8aa3;font-weight:600;padding:4px 3px;text-align:right;line-height:1.2;vertical-align:bottom}
+.tpanel td{padding:2px 3px}.tpanel td.rk{color:#c3cad8;font-weight:600;white-space:nowrap;padding-right:8px}
+.tpanel td input{text-align:right;padding:4px 5px;min-width:58px}
+.tpanel tr.bad td input{border-color:#e0b24a;background:rgba(224,178,74,.08)}
+.tpanel tr.bad td.rk{color:#f0cf7a}
+.tpanel .area{display:none;margin-top:10px;font-size:13px;color:#8c97ae;align-items:center;gap:8px}
+.tpanel .area input{width:260px}
+.actions{position:fixed;right:18px;bottom:18px;z-index:20;display:flex;gap:12px}
+.actions .big{box-shadow:0 6px 18px rgba(0,0,0,.6)}
+.big{font-size:16px;padding:12px 22px;border-radius:12px;font-weight:600}
+.big.gold{border-color:#c9a24a;color:#f3e4bd;background:linear-gradient(180deg,#2a2416,#1b1710)}
+.big.gold:hover{border-color:#f0cf7a;color:#fff}
+.modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(4,6,10,.88);overflow:auto;padding:24px}
+.modal .bar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;margin-bottom:16px;z-index:2}
+.modal .stage{margin:0 auto;transform-origin:top left}
+/* ---------- the card ---------- */
+.card{width:1840px;padding:34px;font-family:Inter,sans-serif;color:#d9dee8;
+ background:radial-gradient(1100px 450px at 15% -10%,#2a1d3f 0%,transparent 60%),radial-gradient(800px 450px at 100% 0%,#13283a 0%,transparent 60%),#0b0f16}
+.card .ch{display:flex;align-items:center;gap:20px;padding:22px 28px;border:1px solid #3b3150;border-radius:16px;background:linear-gradient(90deg,rgba(120,70,180,.18),rgba(20,30,45,.4))}
+.card .cn{font-family:Cardo,serif;font-size:54px;letter-spacing:2px;color:#f3e4bd;line-height:1;text-transform:uppercase}
+.card .cs{color:#ff3b3b;font-size:26px;letter-spacing:3px;margin-left:12px}
+.card .chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.card .chip{padding:5px 13px;border-radius:999px;background:#1a2130;border:1px solid #2e3850;font-size:15px;font-weight:600}
+.card .chip.set{border-color:#5a4a2a;color:#f0cf7a}
+.card .panel{margin-top:20px;border:1px solid #232c3d;border-radius:16px;background:rgba(18,24,35,.85);padding:20px}
+.card .pt{font-family:Cardo,serif;font-size:24px;color:#f3e4bd;letter-spacing:1.5px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline}
+.card .pt small{font-family:Inter;font-size:13px;color:#7f8aa3;letter-spacing:0}
+.card .gear{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card .gc{background:#151b27;border:1px solid #2a3448;border-radius:12px;padding:14px 16px}
+.card .gc.none{opacity:.45}
+.card .gtop{display:flex;gap:12px}.card .gtop img{width:84px;height:84px;border-radius:6px}
+.card .gtop .ph{width:84px;height:84px;border-radius:6px;border:1px dashed #3a4660}
+.card .gm{flex:1}.card .sl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7f8aa3}
+.card .main{display:flex;justify-content:space-between;font-size:23px;font-weight:700;color:#fff;margin-top:2px;gap:8px}
+.card .asc{display:flex;justify-content:space-between;font-size:15px;color:#d77cf2;font-weight:600;margin-top:2px}
+.card .setn{font-size:12px;color:#c9a24a;margin-top:3px}
+.card .subs{margin-top:10px;border-top:1px solid #232c3d;padding-top:8px}
+.card .sr{display:grid;grid-template-columns:1fr 64px 56px;font-size:16px;line-height:1.6}
+.card .sr b{text-align:right;color:#e8ecf3;font-weight:600}.card .sr i{text-align:right;color:#5fd16a;font-style:normal;font-weight:600}
+.card .row2{display:grid;grid-template-columns:1fr 470px;gap:22px}
+.card .row2>.panel{margin-top:22px}
+.card .empty{border:1.5px dashed #2e3850;border-radius:12px;color:#5d6880;font-size:15px;text-align:center;padding:26px 16px;line-height:1.6}
+.card .empty b{display:block;color:#7f8aa3;font-family:Cardo,serif;font-size:19px;letter-spacing:1px}
+.card table{width:100%;border-collapse:collapse;font-size:15px}
+.card th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7f8aa3;font-weight:600;padding:7px 5px;text-align:right;border-bottom:1px solid #2a3448;line-height:1.25;vertical-align:bottom}
+.card td{padding:9px 5px;text-align:right;border-bottom:1px solid #1c2433;color:#3a4660}
+.card td.rk{text-align:left;color:#c3cad8;font-weight:600}
+.card th.ar,.card td.ar{background:rgba(127,211,200,.06)}.card th.ar{color:#7fd3c8}
+.card th.tot{color:#f3e4bd}.card td.tot{background:rgba(201,162,74,.06)}
+.card .sab{font-family:Inter;font-size:13px;color:#9aa5bb;border:1px solid #2e3850;border-radius:8px;padding:5px 10px}
+.card .bl{display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid #232c3d}
+.card .bl .ph{width:60px;height:60px;border-radius:8px;border:1.5px dashed #3a4660}
+.card .bl .n{font-size:19px;font-weight:700;color:#7f8aa3}
+.card .ch{justify-content:space-between}
+.card .ctx{text-align:right}.card .ctx .l{font-size:14px;letter-spacing:3px;color:#7f8aa3;text-transform:uppercase}
+.card .ctx .v{font-family:Cardo,serif;font-size:34px;color:#7fd3c8}
+.card .abadge{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;border:1px solid #3f8f86;background:rgba(127,211,200,.12);color:#9fe6dc;font-size:16px;font-weight:600}
+.card td.w{color:#e1e5ee}.card td.g{color:#7be07a}.card td.tot{color:#f0cf7a;font-weight:800;font-size:18px}
+.card th.ar,.card td.ar{background:rgba(127,211,200,.10)}.card th.tot,.card td.tot{background:rgba(201,162,74,.10)}
+.card .relic{display:flex;gap:16px}.card .relic img.art{width:150px;height:180px;object-fit:cover;border-radius:10px;border:1px solid #2f5866}
+.card .rn{font-family:Cardo,serif;font-size:26px;color:#7fe0ec}.card .myth{display:inline-block;color:#fff;font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px;margin:6px 0}
+.card .rs{display:flex;gap:8px;margin-top:6px}.card .rs div{background:#1b2333;border-radius:8px;padding:6px 10px;font-size:13px;color:#8c97ae;text-align:center}.card .rs b{display:block;color:#5fd16a;font-size:17px}
+.card .rd{font-size:15px;line-height:1.5;margin-top:12px;color:#c3cad8}.card .sets{width:100%;border-radius:10px;margin-top:12px}
+.card .rpan{flex:1;display:flex;flex-direction:column}
+.card .rpan .relic img.art{width:190px;height:228px}
+.card .rpan .rn{font-size:30px}.card .rpan .rd{font-size:18px;line-height:1.65;margin:16px 0}
+.card .rpan .rs{flex-wrap:wrap}.card .rpan .rs div{padding:6px 9px;min-width:62px}.card .rpan .rs b{font-size:18px;white-space:nowrap}
+.card .rs div.lk b{color:#7d879b;font-size:14px}
+.card .relic>div{min-width:0}
+.card .brow{display:flex;gap:18px;align-items:center}.card .brow img{width:96px;height:auto;display:block;flex:none}
+.card .brow .ph{width:84px;height:96px;border:1.5px dashed #3a4660;border-radius:12px}
+.card .brow .bl2{font-family:Cardo,serif;font-size:16px;color:#7f8aa3;letter-spacing:1.5px}
+.card .brow .bn{font-family:Cardo,serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:1px;line-height:1.2}
+.card .brow .bs{font-size:22px;letter-spacing:3px;margin-top:2px}
+.card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
+.raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+<div class="reset"><div class="ask" id="askReset">Start over and clear everything? <button class="yes" id="yesReset">Yes, clear</button><button id="noReset">No</button></div><button class="x" id="btnReset" title="Start over">✕</button></div>
+<div class="wrap">
+  <h1><span class="myname"><i>◆</i>Fragility<i>◆</i></span> Raid Shadow Legends Card</h1>
+  <div class="sub">Turn your in-game screenshots into one clean build card</div>
+  <div class="howto">
+    In the game, open the champion and tap each equipped item so its details window appears top-left, then take a screenshot — one per item, plus the <b>Total Stats</b> screen, the <b>Masteries</b> screen, the <b>relic tab</b> and the <b>skills tab</b> (for the Blessing).<br>
+    Drop <b>all of them at once</b> in the gold box below and each goes to its place by itself — or drop one on a slot, or click a slot and press <b>Ctrl+V</b>.
+    Any screenshot works — full screen or windowed, with or without the taskbar: the site finds the game in the picture. Everything is read in your browser; your screenshots are not uploaded anywhere. Anything <b style="color:#f0cf7a">highlighted</b> needs a look.
+  </div>
+  <div class="hero">
+    <div><div class="lbl">Champion</div><input class="hn" id="hName" placeholder="from screenshot…"></div>
+    <div><div class="lbl">Level</div><input class="hl" id="hLvl"></div>
+    <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
+    <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
+  </div>
+  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats, Masteries, Relic and Skills</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="blog" id="blog"></div>
+  <div class="status" id="status">Loading text reader…</div>
+  <div class="grid" id="grid"></div>
+  <div class="tpanel" id="tpanel" tabindex="0">
+    <button class="sx" id="tClear" title="Remove Total Stats">✕</button>
+    <div class="sh"><span class="sn">Total Stats</span><span class="badge" id="tBadge">empty</span></div>
+    <div class="drop" id="tDrop">Drop the <b>Total Stats</b> screenshot here (the table with all bonus columns)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="tFile" accept="image/*">
+    <div class="err" id="tErr"></div>
+    <div class="area" id="tArea">Showing Area Bonuses for: <input id="tAreaIn"></div>
+    <div class="tbl" id="tTbl"></div>
+  </div>
+  <div class="tpanel" id="rpanel" tabindex="0">
+    <button class="sx" id="rClear" title="Remove">✕</button>
+    <div class="sh"><span class="sn">Relic</span><span class="badge" id="rBadge">empty</span></div>
+    <div class="drop" id="rDrop">Drop the screenshot with the <b>Equipped Relic</b> open (relic tab on the champion screen)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="rFile" accept="image/*">
+    <div class="err" id="rErr"></div>
+    <div id="rView" style="display:none;margin-top:12px;gap:16px;align-items:flex-start"><img id="rImg" style="height:160px;border-radius:8px;border:1px solid #2a3448"><div style="flex:1;font-size:14px;line-height:1.7"><input id="rName" style="font-size:16px;font-weight:700;margin-bottom:6px"><div id="rInfo"></div><textarea id="rDesc" rows="4" style="width:100%;margin-top:6px;font-family:inherit;font-size:13px;background:#121825;color:#e8ecf3;border:1px solid #2e3850;border-radius:6px;padding:6px"></textarea></div></div>
+  </div>
+  <div class="tpanel" id="bpanel" tabindex="0">
+    <button class="sx" id="bClear" title="Remove">✕</button>
+    <div class="sh"><span class="sn">Blessing</span><span class="badge" id="bBadge">empty</span></div>
+    <div class="drop" id="bDrop">Drop the screenshot with the <b>Skills</b> tab open (shows the Blessing at the bottom right)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="bFile" accept="image/*">
+    <div class="err" id="bErr"></div>
+    <div id="bView" style="display:none;margin-top:12px;gap:16px;align-items:flex-start"><img id="bImg" style="height:110px"><div style="font-size:14px;line-height:1.8">Blessing: <input id="bName" style="width:240px;font-weight:700"><div id="bInfo" style="color:#8c97ae"></div></div></div>
+  </div>
+  <div class="tpanel" id="mpanel" tabindex="0">
+    <button class="sx" id="mClear" title="Remove Masteries">✕</button>
+    <div class="sh"><span class="sn">Masteries</span><span class="badge" id="mBadge">empty</span></div>
+    <div class="drop" id="mDrop">Drop the <b>Masteries</b> screenshot here (the Offense / Defense / Support trees)<br>or click to choose · Ctrl+V to paste</div>
+    <input type="file" id="mFile" accept="image/*">
+    <div class="err" id="mErr"></div>
+    <div id="mView" style="display:none;margin-top:12px;align-items:center;gap:16px"><img id="mImg" style="height:220px;border-radius:8px;border:1px solid #2a3448"><div id="mCnt" style="font-size:15px;color:#c3cad8;line-height:1.8"></div></div>
+  </div>
+  <div class="actions"><button class="big gold" id="btnPreview">Preview card</button></div>
+</div>
+<div class="modal" id="modal"><div class="bar"><button class="big gold" id="btnSave">Download PNG</button><button class="big" id="btnClose">← Back</button></div><div class="stage" id="stage"></div></div>
+
+<script src="tesseract.min.js"></script>
+<script src="html2canvas.min.js"></script>
+<script>
+const SLOTS=["Weapon","Helmet","Shield","Gloves","Chest","Boots","Ring","Amulet","Banner"];
+const STATS=["HP","ATK","DEF","SPD","C. RATE","C. DMG","RES","ACC"];
+const SETS_HINT="";
+const state={}; let active=null; const hero={name:'',lvl:'',stars:0,from:''};
+function refreshBlessNote(){const b=document.getElementById('bInfo');if(!b)return;b.innerHTML=hero.stars?`<span style="color:#ff3b3b;font-size:20px;letter-spacing:3px">${'★'.repeat(hero.stars)}</span>`:'<span style="color:#7f8aa3">stars come from the champion screenshots</span>';}
+function drawStars(){refreshBlessNote();const h=document.getElementById('hStars');h.innerHTML=[1,2,3,4,5,6].map(i=>`<span data-i="${i}" class="${i<=hero.stars?'':'off'}">★</span>`).join('');}
+document.addEventListener('click',e=>{const st=e.target.closest('#hStars span');if(st){hero.stars=+st.dataset.i;drawStars();}});
+document.addEventListener('DOMContentLoaded',()=>{drawStars();
+  document.getElementById('hName').addEventListener('input',e=>hero.name=e.target.value.trim());
+  document.getElementById('hLvl').addEventListener('input',e=>hero.lvl=e.target.value.trim());}); let worker=null; const queue=[]; let busy=false;
+
+/* ---------- UI ---------- */
+const grid=document.getElementById('grid');
+const opt=v=>`<option value=""></option>`+STATS.map(s=>`<option${s===v?' selected':''}>${s}</option>`).join('');
+SLOTS.forEach(name=>{
+  const el=document.createElement('div'); el.className='slot'; el.tabIndex=0; el.dataset.slot=name;
+  el.innerHTML=`<button class="sx" title="Remove this item">✕</button><div class="sh"><span class="sn">${name}</span><span class="badge">empty</span></div>
+  <div class="drop">Drop screenshot here<br>or click to choose · Ctrl+V to paste</div>
+  <input type="file" accept="image/*" multiple>
+  <div class="thumb"><img class="icon"><div style="font-size:12px;color:#8c97ae" class="setname"></div></div>
+  <div class="err"></div>
+  <div class="mis"></div>
+  <div class="form">
+    <div class="setrow"><label>Set</label><input class="f-set"></div>
+    <div class="setrow namerow" style="display:none;margin-top:6px"><label>Name</label><input class="f-name" placeholder="special accessory name, if any"></div>
+    <div class="row main" style="margin-top:8px"><select class="f-ms">${opt('')}</select><input class="f-mv" placeholder="value"><select class="f-as">${opt('')}</select><input class="f-av asc" placeholder="bonus"></div>
+    <div class="row" style="margin-top:8px"><label>Substat</label><label>Rolls</label><label>Value</label><label>Glyph</label></div>
+    ${[0,1,2,3].map(i=>`<div class="row sub" data-i="${i}"><select class="f-ss">${opt('')}</select><input class="f-sr" placeholder="0"><input class="f-sv"><input class="f-sg glyph" placeholder="—"></div>`).join('')}
+    <div class="hint">Main stat · ascension bonus (purple, if any) · substats</div>
+    <div class="raw"></div>
+  </div>`;
+  grid.appendChild(el);
+  const file=el.querySelector('input[type=file]');
+  const pick=()=>{setActive(el);file.click();};
+  el.querySelector('.drop').addEventListener('click',pick);
+  el.addEventListener('click',()=>setActive(el));
+  el.querySelector('.sx').addEventListener('click',e=>{e.stopPropagation();clearSlot(el);});
+  file.addEventListener('change',()=>{const fs=[...file.files];if(fs.length>1)handleBulk(fs);else if(fs[0])handle(el,fs[0]);file.value='';});
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length>1)handleBulk(fs);else if(fs[0])handle(el,fs[0]);});
+  el.addEventListener('input',e=>{if(e.target.matches('input,select'))e.target.classList.remove('bad');});
+});
+function emptySlot(el){
+  el.querySelector('.err').style.display='none';
+  el.querySelector('.drop').style.display=''; el.querySelector('.thumb').style.display='none';
+  el.querySelector('.form').style.display='none'; el.querySelector('.mis').style.display='none';
+  el.querySelectorAll('input:not([type=file]),select').forEach(n=>{n.value='';n.classList.remove('bad');});
+  el.querySelector('.thumb img').removeAttribute('src'); el.querySelector('.raw').textContent='';
+  el._hero=null; el.classList.remove('filled'); delete state[el.dataset.slot]; badge(el,'','empty');
+}
+function setHero(h,from){
+  Object.assign(hero,h?{name:h.name,lvl:h.lvl,stars:h.stars,from}:{name:'',lvl:'',stars:0,from:''});
+  document.getElementById('hName').value=hero.name; document.getElementById('hLvl').value=hero.lvl; drawStars();
+  document.getElementById('hNote').textContent=h?`Read from the ${from} screenshot. Click a star to correct.`:'Filled in automatically from the first screenshot. Click a star to correct.';
+}
+function clearSlot(el){
+  for(let i=queue.length-1;i>=0;i--)if(queue[i].el===el)queue.splice(i,1);
+  const wasSource=hero.from===el.dataset.slot; emptySlot(el);
+  if(wasSource){ const next=[...document.querySelectorAll('.slot')].find(s=>s._hero); setHero(next?next._hero:null,next?next.dataset.slot:''); }
+  // re-check mismatch warnings against the (possibly new) hero
+  document.querySelectorAll('.slot').forEach(s=>{const m=s.querySelector('.mis');
+    if(s._hero&&hero.name&&s._hero.name.toLowerCase()!==hero.name.toLowerCase()){m.textContent=`⚠ This screenshot is from ${s._hero.name}, not ${hero.name}.`;m.style.display='block';}else m.style.display='none';});
+}
+function resetAll(){
+  clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
+  queue.length=0;
+  for(const k in state)delete state[k];
+  setHero(null,'');
+  document.querySelectorAll('.slot').forEach(el=>{emptySlot(el);el.classList.remove('active');});
+  active=null; setStatus(worker?'Ready — add your screenshots.':'Loading text reader…');
+}
+document.getElementById('btnReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='flex';});
+document.getElementById('noReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';});
+document.getElementById('yesReset').addEventListener('click',()=>{document.getElementById('askReset').style.display='none';resetAll();});
+/* which of the 9 equipped items is enlarged/highlighted in the right-hand panel */
+const CELLS=(()=>{const xs=[[1466,1584],[1610,1728],[1754,1872]],x3=[[1460,1578],[1603,1721],[1747,1865]],ys=[[218,337],[362,481],[538,657]],out=[];
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const [x0,x1]=(r===2?x3:xs)[c],[y0,y1]=ys[r];out.push([x0,y0,x1,y1]);}return out;})();
+function highlightSlot(img){
+  const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+  const g=c.getContext('2d'); g.drawImage(img,0,0); const W=c.width;
+  const d=g.getImageData(0,0,c.width,c.height).data;
+  const hot=(x,y)=>{x=Math.round(x*s);y=Math.round(y*s);const k=(y*W+x)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>178&&(mx-mn)/mx>0.5;};
+  const sc=CELLS.map(([x0,y0,x1,y1])=>{let n=0,t=0;for(let q=5;q<13;q++){
+      for(let x=x0-q;x<x1+q;x+=2){t+=2;n+=hot(x,y0-q)+hot(x,y1+q);}
+      for(let y=y0-q;y<y1+q;y+=2){t+=2;n+=hot(x0-q,y)+hot(x1+q,y);} } return n/t;});
+  const order=sc.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  const sure=order[0][0]>0.12 && order[0][0]-order[1][0]>0.1 && order[0][0]>2.5*order[1][0];
+  return sure?SLOTS[order[0][1]]:null;
+}
+function aspectOk(img){return Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.03;}
+function aspectNote(img,name){const log=document.getElementById('blog');const t=document.createElement('span');t.className='no';
+  t.textContent=`⚠ ${name||'screenshot'} is ${img.naturalWidth}×${img.naturalHeight}, not a 16:9 game screen — if it reads wrong, take it in full screen or with Alt+PrintScreen`;log.appendChild(t);}
+async function identifySlot(img){
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const t=(await worker.recognize(crop(img,25,0,475,125,2,'bw'))).data.text;
+  {const k=slotWord(t); if(k) return ARMOR[k];}
+  if(!/set\s*[:;]/i.test(t)) return highlightSlot(img);                 // not an item window → old check
+  // accessory (the game shows the faction instead of the slot): which of the bottom three is highlighted
+  const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
+  const hot=(x,y)=>{x=Math.round(x*s);y=Math.round(y*s);const k=(y*W+x)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>178&&(mx-mn)/mx>0.5;};
+  const sc=CELLS.slice(6).map(([x0,y0,x1,y1])=>{let n=0,t2=0;for(let q=5;q<13;q++){for(let x=x0-q;x<x1+q;x+=2){t2+=2;n+=hot(x,y0-q)+hot(x,y1+q);}for(let y=y0-q;y<y1+q;y+=2){t2+=2;n+=hot(x0-q,y)+hot(x1+q,y);}}return n/t2;});
+  const o=sc.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  return (o[0][0]>0.1&&o[0][0]>1.5*o[1][0])?SLOTS[6+o[0][1]]:null;
+}
+function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
+async function handleBulk(files){
+  const log=document.getElementById('blog'); log.innerHTML=''; const batch={used:{}};
+  for(const f of files){
+    let img; try{img=await loadImg(f);}catch(e){continue;}
+    const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
+    queue.push({unknown:true,img,tag,name:f.name,batch});
+  }
+  // all item screenshots of one person share the same item window: take the common frame of the batch (median per screen size)
+  const groups={}; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(!r)continue; const k=r.W+'x'+r.H; (groups[k]=groups[k]||[]).push(r); }
+  for(const k in groups){ const g=groups[k]; if(g.length<2)continue; const med=f=>{const v=g.map(r=>r[f]).sort((a,b)=>a-b);return v[v.length>>1];};
+    POPS[k]={s:med('s'),T:med('T'),L:med('L'),W:g[0].W,H:g[0].H,batch:true}; }
+  pump();
+}
+(()=>{const z=document.getElementById('bulk'),fi=document.getElementById('bulkFile');
+  z.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{if(fi.files.length)handleBulk([...fi.files]);fi.value='';});
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag'));
+  z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(fs.length)handleBulk(fs);});
+})();
+/* ---------- universal screenshot normaliser: finds the game, works out its scale and aspect,
+   and rebuilds a standard 1920x1080 view (left-, centre- and right-anchored parts placed correctly) ---------- */
+const REFK={"item":{"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"recommended":[[688,264]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352]],"storage":[[1025,356]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"total":[[1664,702]],"stats":[[1735,703]]},"totals":{"showing":[[1224,228]],"area":[[1312,226],[1694,306],[1606,226]],"basic":[[132,320]],"stats":[[194,320]],"artifacts":[[336,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320]],"total":[[1850,320],[149,992]],"guardians":[[984,334]],"rate":[[100,656]],"ignore":[[76,918]],"artifact":[[231,992],[524,992],[915,992]],"bonus":[[322,992]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"selected":[[1696,226]]},"masteries":{"offense":[[330,150]],"defense":[[960,150]],"support":[[1590,150]]},"relic":{"rank":[[147,133]],"info":[[1278,208]],"equipped":[[1629,224]],"relic":[[1738,222]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]],"champion":[[616,570],[194,1011]],"edit":[[1670,900]],"tavern":[[1246,922]],"reviews":[[617,941]],"vaults":[[312,1008]]},"skills":{"rank":[[147,132]],"info":[[1278,208]],"skills":[[1669,222]],"power":[[1251,336]],"level":[[1555,423],[1759,423],[1555,673],[1748,673]],"champion":[[616,570],[194,1011]],"lore":[[618,596]],"skins":[[1252,586]],"aura":[[1550,764]],"blessing":[[1787,764]],"reviews":[[617,941]],"tavern":[[1246,922]],"vaults":[[312,1008]],"battles":[[1579,1032]]}};   // item: only fixed UI words — the set text in the popup changes per set
+function anchorOf(kind,x,y){
+  if(kind==='totals'||kind==='masteries')return 'C';
+  if(kind==='item')return x<520?'L':(x>=1420?'R':'C');
+  if(y<80)return 'C'; return x<720?'L':(x>=1150?'R':'C');           // relic / skills (champion screen)
+}
+const ABASE={L:0,C:960,R:1920};
+/* item window: always top-left in the game, its height is always 534 units (its width follows the text).
+   Found by its light-blue frame, so it needs no template of the whole screen. */
+const POP_H=534.5, POP_X=9.5, POPS={};
+/* relic tab: the row of bonus names (ATK / ACC / HP ...) is always there, three boxes 122 units apart.
+   It gives the scale and the place of every other field of the relic panel, at any screen size or shape. */
+const RBOX=[1515,1637,1760], RROW=546, RLEFT=1459;
+async function panelWords(img){                                  // words of the right part of the screen, read once per screenshot
+  if(img._pw)return img._pw;
+  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:1.5;
+  const c=document.createElement('canvas');c.width=Math.round((W-x0)*k);c.height=Math.round(H*k);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,x0,0,W-x0,H,0,0,c.width,c.height);
+  await worker.setParameters({tessedit_pageseg_mode:'11'}); const {data}=await worker.recognize(c); await worker.setParameters({tessedit_pageseg_mode:'6'});
+  return img._pw=(data.words||[]).map(w=>({t:w.text,x0:x0+w.bbox.x0/k,x1:x0+w.bbox.x1/k,y0:w.bbox.y0/k,y1:w.bbox.y1/k})).map(w=>({...w,x:(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,h:w.y1-w.y0}));
+}
+const RANCH={};      // relic panel found in a screenshot of this size: the Skills tab has exactly the same panel
+/* Skills tab: "SKILLS" (top of the panel, centred) gives the panel's x; "BLESSING" gives the y of the blessing part.
+   Both words appear nowhere else in the game. The scale comes from the relic tab of the same batch, or from the letters. */
+const RSKILLS_X=1669, RBLESS_Y=764, RHEAD_H=21;
+async function blessAnchor(img){
+  const ws=await panelWords(img), key=img.naturalWidth+'x'+img.naturalHeight;
+  const b=ws.find(w=>/bless/i.test(w.t)), k=ws.find(w=>/^\W*skil/i.test(w.t)); if(!b||!k)return null;
+  const R=RANCH[key], sc=R?R.s:((b.h+k.h)/2)/RHEAD_H;
+  return {s:sc,ax:k.x-RSKILLS_X*sc,ay:b.y-RBLESS_Y*sc};
+}
+async function relicAnchor(img){
+  const ws=await panelWords(img);
+  const STAT=['ATK','ACC','HP','DEF','SPD','RES','DMG','RATE'];
+  const isStat=t=>{t=t.replace(/[^A-Za-z]/g,'').toUpperCase(); return t.length>=2&&t.length<=4&&STAT.some(n=>n===t||(t.length>=3&&lev(n,t)<=1));};
+  const lab=ws.filter(w=>isStat(w.t)||/^C[.,]?$/i.test(w.t)); let best=null;
+  for(const a of lab){ if(!isStat(a.t))continue; const row=lab.filter(b=>Math.abs(b.y-a.y)<a.h*0.6).sort((p,q)=>p.x-q.x);
+    // "C. DMG" / "C. RATE" come as two words: one box, centred between them
+    const xs=[]; for(let i=0;i<row.length;i++){ const b=row[i], nx=row[i+1];
+      if(/^C[.,]?$/i.test(b.t)){ if(nx&&nx.x0-b.x1<a.h*2){ xs.push((b.x0+nx.x1)/2); i++; } continue; }
+      if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); }
+    if(xs.length<2)continue; const sh=a.h/18;                                  // bonus names are about 18 units tall
+    let sc=null; for(let i=1;i<xs.length;i++){ const gap=xs[i]-xs[i-1], n=Math.max(1,Math.round(gap/(122*sh))); if(n<=2){ const v=gap/(122*n); if(!sc)sc=v; else sc=(sc+v)/2; } }
+    if(!sc||sc<0.25||sc>2)continue;
+    // a value (+number or locked "Lvl") must sit under the names
+    const vals=ws.filter(v=>v.y>a.y+8*sc&&v.y<a.y+50*sc&&/^\+?\d|lvl|lv/i.test(v.t)).length; if(!vals)continue;
+    const score=xs.length*2+vals; if(!best||score>best.score)best={score,xs,y:a.y,s:sc,words:ws};
+  }
+  if(!best)return null; const sc=best.s;
+  let b1; if(best.xs.length>=3)b1=best.xs[0];
+  else { // the description lines start at the panel's left edge: take the edge most lines share, inside the panel only
+    const st=ws.filter(w=>w.y>best.y+40*sc&&w.y<best.y+140*sc&&w.x0>best.xs[0]-130*sc&&w.x0<best.xs[0]+40*sc).map(w=>w.x0).sort((p,q)=>p-q);
+    let left=1e9,bn=0; st.forEach(x=>{const n=st.filter(y=>Math.abs(y-x)<4*sc).length; if(n>bn||(n===bn&&x<left)){bn=n;left=x;}}); if(bn<2)left=1e9;
+    b1=left<1e9?left+(RBOX[0]-RLEFT)*sc:best.xs[0]; if(Math.abs(best.xs[0]-b1)>40*sc)b1=best.xs[0]-Math.round((best.xs[0]-b1)/(122*sc))*122*sc; }
+  const ra={s:sc,ax:b1-RBOX[0]*sc,ay:best.y-RROW*sc}; RANCH[img.naturalWidth+'x'+img.naturalHeight]=ra; return ra;
+}
+function popupRect(img){
+  const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,Math.round(W*0.45),H).data,w=Math.round(W*0.45);
+  const cy=(x,y)=>{const k=(y*w+x)*4;return d[k+1]>150&&d[k+2]>170&&d[k]<120;};
+  let xL=-1; for(let x=0;x<Math.round(W*0.10)&&xL<0;x++){let n=0;for(let y=0;y<H;y++)if(cy(x,y))n++; if(n>=H*0.25)xL=x;}
+  if(xL<0)return null;
+  const seg=Math.round(W*0.2), rows=[];
+  for(let y=0;y<H;y++){let n=0;for(let x=xL;x<xL+seg&&x<w;x++)if(cy(x,y))n++; if(n>=seg*0.7)rows.push(y);}
+  if(rows.length<2)return null;
+  const top=rows[0]; let bot=-1; for(const y of rows){const h=y-top; if(h>=H*0.3&&h<=H*0.78)bot=y;}
+  if(bot<0)return null;
+  const sc=(bot-top)/POP_H; return {s:sc,T:top,L:xL-POP_X*sc,W,H};
+}
+// windows narrower than 16:9: the champion screen keeps its top part glued to the top and its bottom part (Tavern,
+// Champion Vaults, Edit, the Blessing) glued to the bottom, with extra space between — so those parts get their own y offset
+function vAnchorOf(kind,x,y){
+  if(kind!=='relic'&&kind!=='skills'||y<80)return 'T';
+  if(x<480)return y>=940?'B':'T'; if(x<1420)return y>=400?'B':'T';
+  if(kind==='skills'&&y>=300&&y<740)return 'M';     // the skills grid sits in the middle: it moves by half the extra space
+  return y>=740?'B':'T';
+}
+async function ocrWords(img){
+  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
+  const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  await worker.setParameters({tessedit_pageseg_mode:'11'});
+  const {data}=await worker.recognize(c);
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  return (data.words||[]).map(w=>({t:w.text.toLowerCase().replace(/[^a-z]/g,''),x:(w.bbox.x0+w.bbox.x1)/2/up,y:(w.bbox.y0+w.bbox.y1)/2/up})).filter(o=>o.t.length>=4);
+}
+function fitKind(kind,words,imgW){
+  const D=REFK[kind], keys=Object.keys(D);
+  const O=words.map(o=>{ if(D[o.t])return o; if(o.t.length<5)return null;          // tolerate one misread letter ("offens")
+      const k=keys.find(k=>k.length>=5&&Math.abs(k.length-o.t.length)<=1&&lev(k,o.t)<=1); return k?{...o,t:k}:null; }).filter(Boolean);
+  if(O.length<3)return null;
+  const M=[]; O.forEach(o=>D[o.t].forEach(r=>M.push({o,r,a:anchorOf(kind,r[0],r[1]),va:vAnchorOf(kind,r[0],r[1])})));
+  let best=null;
+  const evalH=(sc,y0,offs)=>{ const tol=14*Math.max(sc,0.5); const off={...offs};
+    // estimate missing anchor offsets from y-consistent words
+    ['L','C','R'].forEach(A=>{ if(off[A]!==undefined)return; const v=[];
+      M.forEach(m=>{ if(m.a===A&&Math.abs(m.o.y-(y0+sc*m.r[1]))<tol)v.push(m.o.x-sc*(m.r[0]-ABASE[A])); });
+      if(v.length){v.sort((a,b)=>a-b);off[A]=v[v.length>>1];} });
+    if(off.C===undefined){ if(off.L!==undefined)off.C=off.L+960*sc; else if(off.R!==undefined)off.C=off.R-960*sc; else return null; }
+    // left edge of the game: mirror the right edge around the centre when the right panel was found
+    if(off.L===undefined)off.L=off.R!==undefined?Math.max(0,off.C-Math.max(960*sc,off.R-off.C)):Math.max(0,Math.min(off.C-960*sc,off.C-imgW/2));
+    if(off.R===undefined)off.R=off.C+(off.C-off.L);
+    // bottom-glued parts: their own y offset (same as y0 unless the window is narrower than 16:9)
+    let y0B=y0; { const v=[]; M.forEach(m=>{ if(m.va!=='B')return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]); if(Math.abs(m.o.x-px)>tol)return;
+        const d=m.o.y-(y0+sc*m.r[1]); if(d>-tol&&d<120*sc)v.push(d); });
+      if(v.length){v.sort((a,b)=>a-b); const md=v[v.length>>1]; if(md>tol*0.5)y0B=y0+md;} }
+    let n=0,res=0; const used=new Set();
+    M.forEach(m=>{ if(used.has(m.o))return; const px=off[m.a]+sc*(m.r[0]-ABASE[m.a]), py=(m.va==='B'?y0B:m.va==='M'?(y0+y0B)/2:y0)+sc*m.r[1], d=Math.hypot(m.o.x-px,m.o.y-py);
+      if(d<tol){n++;res+=d;used.add(m.o);} });
+    return {n,res,s:sc,y0,y0B,off};
+  };
+  for(let i=0;i<M.length;i++)for(let j=0;j<M.length;j++){ if(i===j||M[i].o===M[j].o)continue;
+    const a=M[i],b=M[j]; let sc=null;
+    if(Math.abs(b.r[1]-a.r[1])>120&&a.va===b.va) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
+    else if(a.a===b.a&&Math.abs(b.r[0]-a.r[0])>200&&Math.abs(b.r[1]-a.r[1])<40) sc=(b.o.x-a.o.x)/(b.r[0]-a.r[0]);
+    if(!sc||sc<0.3||sc>1.8)continue;
+    if(a.va!=='T')continue; const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
+    const h=evalH(sc,y0,offs); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
+  return best;
+}
+function drawNormalized(img,kind,F){
+  const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
+  const strip=(xa,xb,ya,yb,A,V)=>g.drawImage(img,F.off[A]+F.s*(xa-ABASE[A]),(F.y0B===undefined||!V?F.y0:V==='B'?F.y0B:(F.y0+F.y0B)/2)+F.s*ya,(xb-xa)*F.s,(yb-ya)*F.s,xa,ya,xb-xa,yb-ya);
+  if(kind==='totals'||kind==='masteries'){ strip(0,1920,0,1080,'C'); }
+  else if(kind==='item'){ if(F.pop) g.drawImage(img,F.pop.L,F.pop.T,520*F.pop.s,1080*F.pop.s,0,0,520,1080); else strip(0,520,0,1080,'L');
+    if(F.off){ strip(520,1420,0,1080,'C'); strip(1420,1920,0,1080,'R'); } }
+  else if(F.off){ strip(0,1920,0,80,'C');                                                     // champion screen: L/C/R columns, each split top/bottom
+    strip(0,480,80,940,'L'); strip(0,480,940,1080,'L','B'); strip(480,720,80,400,'L'); strip(480,720,400,1080,'L','B');
+    strip(720,1150,80,400,'C'); strip(720,1150,400,1080,'C','B'); strip(1150,1420,80,400,'R'); strip(1150,1420,400,1080,'R','B');
+    if(F.rmap){ const R=F.rmap; g.drawImage(img,R.ax+R.s*1420,R.ay+R.s*80,500*R.s,1000*R.s,1420,80,500,1000); }
+    else { if(kind==='skills'){ strip(1420,1920,80,300,'R'); strip(1420,1920,300,740,'R','M'); } else strip(1420,1920,80,740,'R');
+      strip(1420,1920,740,1080,'R','B'); } }
+  else if(F.rmap){ const R=F.rmap; g.drawImage(img,R.ax+R.s*1420,R.ay+R.s*80,500*R.s,1000*R.s,1420,80,500,1000); }   // only the relic panel is known
+  return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
+}
+async function autoNormalize(img){
+  setStatus('Finding the game in the screenshot…');
+  const words=await ocrWords(img); let best=null,bk=null;
+  for(const k of Object.keys(REFK)){ const f=fitKind(k,words,img.naturalWidth); if(f&&(!best||f.n>best.n)){best=f;bk=k;} }
+  // item window: placed by its own frame; within one batch the same screen size gives the same frame (backup when one isn't found)
+  let pop=popupRect(img); const key=img.naturalWidth+'x'+img.naturalHeight, med=POPS[key];
+  if(pop&&med&&med.batch&&(Math.abs(pop.s-med.s)>med.s*0.02||Math.abs(pop.T-med.T)>3||Math.abs(pop.L-med.L)>3)) pop=med;   // this one disagrees with the rest
+  if(pop){ if(!med||!med.batch)POPS[key]=pop; } else if(bk==='item'&&best.n>=3&&POPS[key]) pop=POPS[key];   // the batch frame only for a known item screenshot
+  if(pop&&(!best||best.n<3||bk==='item')){
+    const F=best&&bk==='item'?{...best,pop}:{s:pop.s,y0:pop.T,pop};
+    const out=await drawNormalized(img,'item',F); out._src=img; out._pop=pop;
+    return {img:out,kind:'item',fit:F};
+  }
+  // relic tab: place the panel by its row of bonus names (works when the word fit is off or missing)
+  if(bk==='relic'||bk==='skills'||!best||best.n<3){
+    for(const [kind,find] of bk==='skills'?[['skills',blessAnchor],['relic',relicAnchor]]:[['relic',relicAnchor],['skills',blessAnchor]]){ let ra=await find(img);
+      // two independent scales must agree: the landmarks' and the whole screen's (when the screen was found)
+      if(ra&&best&&best.n>=3&&Math.abs(ra.s-best.s)>best.s*0.05){ if(kind==='relic')delete RANCH[img.naturalWidth+'x'+img.naturalHeight]; ra=null; }
+      if(ra){ const F=best&&best.n>=3?{...best,rmap:ra}:{s:ra.s,y0:ra.ay,rmap:ra}; const out=await drawNormalized(img,kind,F); out._src=img; out._rmap=ra; out._kind=kind;
+        return {img:out,kind,fit:F}; } } }
+  if(!best||best.n<3)return {img,kind:null};
+  const plain=Math.abs(best.s-img.naturalWidth/1920)<0.02&&Math.abs(best.y0)<8&&Math.abs((best.y0B||best.y0)-best.y0)<4&&Math.abs(best.off.C-img.naturalWidth/2)<10&&Math.abs(img.naturalWidth/img.naturalHeight-16/9)<0.02;
+  if(plain)return {img,kind:bk};
+  return {img:await drawNormalized(img,bk,best),kind:bk,fit:best};
+}
+/* ---------- find the game inside any screenshot (taskbar, window borders, smaller window) ---------- */
+const REFWORDS={"rate":[[105,173],[1524,917],[105,237],[100,656]],"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363],[336,320]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352],[231,992],[524,992],[915,992]],"storage":[[1025,356]],"equipped":[[238,378],[328,408],[1629,224]],"bonus":[[126,406],[322,992]],"total":[[1664,702],[1850,320],[149,992]],"stats":[[1735,702],[194,320]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"showing":[[1224,228]],"basic":[[132,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320],[1738,222]],"guardians":[[984,334]],"ignore":[[76,918]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"offense":[[330,150]],"defense":[[960,150],[1250,162]],"support":[[1590,150]],"info":[[1278,208]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]]};
+async function locateGame(img,upForce,bin){
+  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):1);
+  const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
+  if(bin){const d=g.getImageData(0,0,c.width,c.height),p=d.data;for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11,v=l>170?0:255;p[i]=p[i+1]=p[i+2]=v;}g.putImageData(d,0,0);}
+  await worker.setParameters({tessedit_pageseg_mode:'11'});
+  const {data}=await worker.recognize(c);
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const O=(data.words||[]).map(w=>({t:w.text.toLowerCase().replace(/[^a-z]/g,''),x:(w.bbox.x0+w.bbox.x1)/2/up,y:(w.bbox.y0+w.bbox.y1)/2/up}))
+    .filter(o=>REFWORDS[o.t]).slice(0,80);
+  if(O.length<3)return null;
+  let best=null;
+  const score=(s,tx,ty)=>{let n=0,res=0;const tol=16*Math.max(s,0.5);
+    for(const o of O){let m=1e9;for(const [rx,ry] of REFWORDS[o.t]){const d=Math.hypot(o.x-(s*rx+tx),o.y-(s*ry+ty));if(d<m)m=d;} if(m<tol){n++;res+=m;}} return [n,res];};
+  for(let i=0;i<O.length;i++)for(let j=i+1;j<O.length;j++){
+    const a=O[i],b=O[j],dob=Math.hypot(b.x-a.x,b.y-a.y); if(dob<150)continue;
+    for(const r1 of REFWORDS[a.t])for(const r2 of REFWORDS[b.t]){
+      const dref=Math.hypot(r2[0]-r1[0],r2[1]-r1[1]); if(dref<250)continue;
+      const s=dob/dref; if(s<0.35||s>1.7)continue;
+      const ang=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r2[1]-r1[1],r2[0]-r1[0]); if(Math.abs(Math.atan2(Math.sin(ang),Math.cos(ang)))>0.04)continue;
+      const tx=a.x-s*r1[0],ty=a.y-s*r1[1]; const [n,res]=score(s,tx,ty);
+      if(!best||n>best.n||(n===best.n&&res<best.res))best={s,tx,ty,n,res,span:dob};
+    }}
+  if(!best)return null;
+  { const tol=16*Math.max(best.s,0.5), xs=[];   // spread of the matched words, in game pixels
+    for(const o of O){for(const [rx,ry] of REFWORDS[o.t]){if(Math.hypot(o.x-(best.s*rx+best.tx),o.y-(best.s*ry+best.ty))<tol){xs.push(rx);break;}}}
+    best.span=xs.length?Math.max(...xs)-Math.min(...xs):0; }
+  return (best.n>=4||(best.n>=3&&best.span>700))?best:null;
+}
+async function normalizeImg(img,T){
+  const c=document.createElement('canvas'); c.width=1920; c.height=1080; const g=c.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,1920,1080); g.imageSmoothingQuality='high';
+  g.drawImage(img,T.tx,T.ty,1920*T.s,1080*T.s,0,0,1920,1080);
+  return await new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png');});
+}
+async function findGame(img){ setStatus('Looking for the game inside the screenshot…'); let T=await locateGame(img);
+  const big=Math.max(1.8,2400/img.naturalWidth);
+  if(!T){ setStatus('Looking closer for the game inside the screenshot…'); T=await locateGame(img,big,true); }
+  if(!T){ T=await locateGame(img,big,false); }
+  if(!T)return null; if(Math.abs(T.s-1)<0.02&&Math.abs(T.tx)<8&&Math.abs(T.ty)<8)return null; return await normalizeImg(img,T); }
+/* ---------- Total Stats ---------- */
+const TROWS=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
+const TCOLS=['Basic Stats','Artifacts','Affinity Bonuses','Classic Arena','Masteries','Faction Guardians','Empowerment','Blessing','Relic','Area Bonuses','Total'];
+const TRIGHT=[222,382,541,700,860,1038,1252,1401,1560,1720,1878];
+const TROWY=[396,461,526,591,656,721,786,851,916];
+const totals={rows:null,area:''};
+// read from the original screenshot where we know exactly where the item window is (one resize instead of two)
+function src(img,x,y,w,h){ const P=img._pop; if(P&&img._src&&x+w<=520) return [img._src,P.L+P.s*x,P.T+P.s*y,P.s*w,P.s*h];
+  const R=img._rmap; if(R&&img._src&&x>=1420) return [img._src,R.ax+R.s*x,R.ay+R.s*y,R.s*w,R.s*h];
+  const s=img.naturalWidth/1920; return [img,x*s,y*s,w*s,h*s]; }
+function crop(img,x,y,w,h,k,mode){
+  const s=img.naturalWidth/1920, c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(...src(img,x,y,w,h),0,0,c.width,c.height);
+  if(mode){const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+    for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11; const v=mode==='bw'?(l>140?0:255):mode==='bw2'?(l>175?0:255):(255-l); p[i]=p[i+1]=p[i+2]=v;} g.putImageData(d,0,0);}
+  return c;
+}
+const tnum=v=>{v=String(v||'').replace(/[,+%\s]/g,'');return v===''?null:(isNaN(+v)?NaN:+v);};
+function rowCells(words){
+  const cells=Array(11).fill('');
+  words.forEach(w=>{ if(!/\d/.test(w.text))return; const t=w.text.replace(/[^\d,.%+\-]/g,''); if(!t)return;
+    const xr=w.right; let best=0; TRIGHT.forEach((r,i)=>{if(Math.abs(r-xr)<Math.abs(TRIGHT[best]-xr))best=i;});
+    if(Math.abs(TRIGHT[best]-xr)<70) cells[best]=(best>0&&best<10&&/^\d/.test(t))?'+'+t:t; });
+  return cells;
+}
+function rowOk(c){ if(!c[10]||!c[0])return false; let sum=0; for(let j=0;j<10;j++){const n=tnum(c[j]); if(n===null)continue; if(isNaN(n))return false; sum+=n;}
+  const t=tnum(c[10]); return !isNaN(t)&&t!==null&&Math.abs(sum-t)<0.6; }
+async function readRow(img,y){
+  const out=[];
+  for(const mode of ['inv','bw','bw2']){
+    const c=crop(img,0,y-30,1900,60,mode==='bw2'?3:2,mode==='bw2'?'bw2':mode);
+    const k=mode==='bw2'?3:2;
+    const {data}=await worker.recognize(c);
+    const words=(data.words||[]).map(w=>({text:w.text,right:(w.bbox.x1/k)}));
+    const cells=rowCells(words); out.push(cells); if(rowOk(cells))return {cells,ok:true};
+    // merge with earlier readings: fill blanks
+    const m=Array(11).fill('').map((_,j)=>out.map(o=>o[j]).find(Boolean)||'');
+    if(rowOk(m))return {cells:m,ok:true};
+  }
+  // one extra digit read into a bonus cell ("+750" -> "+7530"): if dropping exactly one digit makes the row add up, and
+  // only one such fix exists, the row total proves it
+  const fixes=new Set(), m0=Array(11).fill('').map((_,j)=>out.map(o=>o[j]).find(Boolean)||'');
+  for(const cells of [...out,m0]) for(let j=1;j<10;j++){ const c=cells[j]; if(!c)continue;
+    for(let q=0;q<c.length;q++){ if(!/\d/.test(c[q]))continue; const t=c.slice(0,q)+c.slice(q+1); if(!/\d/.test(t))continue;
+      const try_=cells.slice(); try_[j]=t; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } }
+  if(fixes.size===1) return {cells:JSON.parse([...fixes][0]),ok:true};
+  const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
+  return {cells:best,ok:false};
+}
+const TIP=' <span style="color:#8c97ae">If it is the right screen, the game may be too small or cut off in the picture — try a bigger window or full screen.</span>';
+const KNAME={totals:'Total Stats',masteries:'Masteries',relic:'Relic',skills:'Blessing'};
+const PNAME={t:'Total Stats',m:'Masteries',r:'Relic',b:'Blessing'};
+const PCLEAR={t:()=>clearTotals(),m:()=>clearMasteries(),r:()=>clearPanel('r',relic),b:()=>clearPanel('b',bless)};
+async function whatIs(img,kind){ const hl=highlightSlot(img); if(hl)return {slot:hl,label:hl};
+  const k=kind===undefined?await screenKind(img):kind; return k?{kind:k,label:KNAME[k]}:null; }
+function sendTo(t,img){ if(t.slot){const el=document.querySelector(`.slot[data-slot="${t.slot}"]`); if(el.classList.contains('filled'))clearSlot(el); queue.push({el,img}); badge(el,'busy','queued');}
+  else queue.push({unknown:true,img}); pump(); }
+function panelWrong(p,help,t,img){
+  const e=document.getElementById(p+'Err');
+  e.innerHTML='⚠ '+(t?`This is the <b>${t.label}</b> screenshot, not ${PNAME[p]}.<br><button class="mv">Move it to ${t.label}</button>`:help);
+  e.style.display='block'; setBadgeId(p+'Badge','bad','wrong screenshot'); document.getElementById(p+'Drop').style.display='none'; document.getElementById(p+'panel').classList.add('filled');
+  const b=e.querySelector('.mv'); if(b)b.addEventListener('click',ev=>{ev.stopPropagation();PCLEAR[p]();sendTo(t,img);});
+}
+const PHELP={t:`This doesn't look like the <b>Total Stats</b> screen. Open the champion, tap the <b>Total Stats</b> (i) button and select the area (e.g. Hydra Battles), then screenshot the whole screen.`+TIP,
+  m:`This doesn't look like the <b>Masteries</b> screen. Open the champion's Masteries (the Offense / Defense / Support trees) and screenshot the whole screen.`+TIP,
+  r:`This isn't the relic screen. On the champion screen open the <b>relic tab</b> (second icon top-right) and screenshot the whole screen.`+TIP,
+  b:`This isn't the skills screen. On the champion screen open the <b>skills tab</b> (third icon top-right) — the Blessing is at the bottom right — and screenshot the whole screen.`+TIP};
+async function processTotals(img){
+  const tp=document.getElementById('tpanel'); setTBadge('busy','reading…'); setStatus('Reading Total Stats…');
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const head=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
+  if(!/total\s*stats/i.test(head)){ await worker.setParameters({tessedit_pageseg_mode:'6'});
+    if(!img._norm){const img2=await findGame(img); if(img2){img2._norm=1; return processTotals(img2);}}
+    panelWrong('t',PHELP.t,await whatIs(img),img); return; }
+  let area=(await worker.recognize(crop(img,1525,190,350,72,2,'bw'))).data.text.replace(/\s+[vV]+\W*$/,'').replace(/[^A-Za-z' \-]/g,'').trim();
+  const rows=[]; for(const y of TROWY) rows.push(await readRow(img,y));
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  if(/^\W*area\s*selected\W*$/i.test(area))area='No Area Selected';
+  { const r=rows[8]; if(r&&!r.cells.some(Boolean)){ r.cells[0]='0%'; r.cells[10]='0%'; r.ok=true; } }
+  totals.rows=rows; totals.area=area; renderTotals();
+  const bad=rows.filter(r=>!r.ok).length;
+  setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓'); tp.classList.add('filled');
+}
+function setTBadge(c,t){const b=document.getElementById('tBadge');b.className='badge '+c;b.textContent=t;}
+function tErr(msg){const e=document.getElementById('tErr');e.innerHTML='⚠ '+msg;e.style.display='block';setTBadge('bad','wrong screenshot');
+  document.getElementById('tDrop').style.display='none';document.getElementById('tpanel').classList.add('filled');}
+function renderTotals(){
+  document.getElementById('tDrop').style.display='none'; document.getElementById('tErr').style.display='none';
+  const a=document.getElementById('tArea'); a.style.display='flex'; document.getElementById('tAreaIn').value=totals.area;
+  const t=document.getElementById('tTbl'); t.style.display='block';
+  t.innerHTML='<table><tr><th></th>'+TCOLS.map(c=>`<th>${c}</th>`).join('')+'</tr>'+
+    totals.rows.map((r,i)=>`<tr class="${r.ok?'':'bad'}" data-i="${i}"><td class="rk">${TROWS[i]}</td>${r.cells.map((v,j)=>`<td><input data-j="${j}" value="${v}"></td>`).join('')}</tr>`).join('')+'</table>';
+}
+document.addEventListener('input',e=>{
+  const inp=e.target; if(inp.id==='tAreaIn'){totals.area=inp.value.trim();return;}
+  const tr=inp.closest&&inp.closest('#tTbl tr'); if(!tr)return;
+  const r=totals.rows[+tr.dataset.i]; r.cells[+inp.dataset.j]=inp.value.trim(); r.ok=rowOk(r.cells); tr.classList.toggle('bad',!r.ok);
+  const bad=totals.rows.filter(x=>!x.ok).length; setTBadge(bad?'warn':'ok',bad?`${bad} row${bad>1?'s':''} to check`:'read ✓');
+});
+function clearTotals(){ totals.rows=null; totals.area=''; const tp=document.getElementById('tpanel'); tp.classList.remove('filled');
+  ['tArea','tTbl','tErr'].forEach(id=>document.getElementById(id).style.display='none'); document.getElementById('tDrop').style.display=''; setTBadge('','empty'); }
+(()=>{const tp=document.getElementById('tpanel'),fi=document.getElementById('tFile');
+  document.getElementById('tDrop').addEventListener('click',()=>fi.click());
+  document.getElementById('tClear').addEventListener('click',e=>{e.stopPropagation();clearTotals();});
+  fi.addEventListener('change',async()=>{if(fi.files[0]){const img=await loadImg(fi.files[0]);queue.push({totals:true,img});setTBadge('busy','queued');pump();}fi.value='';});
+  tp.addEventListener('dragover',e=>{e.preventDefault();tp.classList.add('drag');});
+  tp.addEventListener('dragleave',()=>tp.classList.remove('drag'));
+  tp.addEventListener('drop',async e=>{e.preventDefault();tp.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f){clearTotals();const img=await loadImg(f);queue.push({totals:true,img});setTBadge('busy','queued');pump();}});
+  tp.addEventListener('click',()=>{document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));active=tp;tp.classList.add('active');});
+})();
+/* ---------- Masteries ---------- */
+const MTREES=[['Offense',25,[125,262,398,534]],['Defense',655,[756,892,1028,1164]],['Support',1285,[1386,1522,1658,1794]]];
+const MROWS=[249,395,541,687,833,979];
+const mast={img:null,counts:null};
+function countMasteries(img){
+  const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const g=c.getContext('2d');g.drawImage(img,0,0);const W=c.width,d=g.getImageData(0,0,c.width,c.height).data;
+  return MTREES.map(([name,,xs])=>{let lit=0;MROWS.forEach((y,ri)=>xs.forEach((x,ci)=>{if(ri===0&&(ci===0||ci===3))return;
+    let n=0,t=0;for(let dx=-35;dx<=35;dx+=3)for(let dy=-35;dy<=35;dy+=3){const k=(Math.round((y+dy)*s)*W+Math.round((x+dx)*s))*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);t++;if(mx>140&&(mx-mn)/mx>0.55)n++;}
+    if(n/t>0.12)lit++;}));return [name,lit];});   // lit nodes measure 24–49 %, dark ones ~0 %
+}
+function processMasteries(img){
+  const counts=countMasteries(img); let use=counts.filter(c=>c[1]>0).map(c=>c[0]); if(!use.length)use=['Offense','Defense'];
+  const s=img.naturalWidth/1920, trees=MTREES.filter(t=>use.includes(t[0]));
+  const w=610,h=957,gap=10,c=document.createElement('canvas'); c.width=trees.length*w+(trees.length-1)*gap; c.height=h;
+  const g=c.getContext('2d'); trees.forEach((t,i)=>g.drawImage(img,t[1]*s,100*s,w*s,h*s,i*(w+gap),0,w,h));
+  mast.img=c.toDataURL('image/jpeg',0.9); mast.counts=counts;
+  document.getElementById('mDrop').style.display='none'; document.getElementById('mErr').style.display='none';
+  document.getElementById('mView').style.display='flex'; document.getElementById('mImg').src=mast.img;
+  document.getElementById('mCnt').innerHTML=counts.map(([n,v])=>`${n}: <b>${v}</b>`).join('<br>');
+  setBadgeId('mBadge','ok','read ✓'); document.getElementById('mpanel').classList.add('filled');
+}
+function setBadgeId(id,c,t){const b=document.getElementById(id);b.className='badge '+c;b.textContent=t;}
+function clearMasteries(){mast.img=null;mast.counts=null;const p=document.getElementById('mpanel');p.classList.remove('filled');
+  ['mView','mErr'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('mDrop').style.display='';setBadgeId('mBadge','','empty');}
+async function screenKind(img){
+  if(img._kind)return img._kind;                                   // already known from its own landmarks
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const a=(await worker.recognize(crop(img,20,85,700,85,1.5,'bw'))).data.text;
+  let kind=/total\s*stats/i.test(a)?'totals':null;
+  if(!kind){const b=(await worker.recognize(crop(img,180,110,320,65,1.5,'bw'))).data.text; if(/offen[sc]e/i.test(b))kind='masteries';}
+  if(!kind){ for(const m of ['bw','inv']){ const c=(await worker.recognize(crop(img,1440,200,460,40,2,m))).data.text;
+      if(/equip\w*\s*rel/i.test(c)){kind='relic';break;} if(/skil/i.test(c)){kind='skills';break;} } }
+  await worker.setParameters({tessedit_pageseg_mode:'6'}); return kind;
+}
+(()=>{const p=document.getElementById('mpanel'),fi=document.getElementById('mFile');
+  const go=async f=>{clearMasteries();const img=await loadImg(f);queue.push({kindWant:'masteries',img});setBadgeId('mBadge','busy','queued');pump();};
+  document.getElementById('mDrop').addEventListener('click',()=>fi.click());
+  document.getElementById('mClear').addEventListener('click',e=>{e.stopPropagation();clearMasteries();});
+  fi.addEventListener('change',()=>{if(fi.files[0])go(fi.files[0]);fi.value='';});
+  p.addEventListener('dragover',e=>{e.preventDefault();p.classList.add('drag');});
+  p.addEventListener('dragleave',()=>p.classList.remove('drag'));
+  p.addEventListener('drop',e=>{e.preventDefault();p.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)go(f);});
+  p.addEventListener('click',()=>{document.querySelectorAll('.slot,.tpanel').forEach(s=>s.classList.remove('active'));active=p;p.classList.add('active');});
+  window._goMasteries=go;
+})();
+/* ---------- Relic, Blessing, champion details ---------- */
+const relic={}; const bless={}; const champ={};
+function pxData(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const g=c.getContext('2d');g.drawImage(img,0,0);
+  const d=g.getImageData(0,0,c.width,c.height).data,W=c.width,s=img.naturalWidth/1920;return (x,y)=>{const k=(Math.round(y*s)*W+Math.round(x*s))*4;return [d[k],d[k+1],d[k+2]];};}
+function cropURL(img,x,y,w,h,type){const s=img.naturalWidth/1920,c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);
+  c.getContext('2d').drawImage(...src(img,x,y,w,h),0,0,c.width,c.height);return c.toDataURL(type||'image/png');}
+function rarityByColor([r,g,b]){ // label background colours used by the game
+  if(r>200&&g<110&&b<90)return 'Mythical'; if(r>200&&g>110&&g<175&&b<80)return 'Legendary';
+  if(r>150&&b>150&&g<110)return 'Epic'; if(b>170&&r<110)return 'Rare'; if(g>160&&r<120&&b<120)return 'Uncommon'; return '';}
+function affinityByColor(px){ // the icon sits just left of the champion name; the name is centred, so find it first
+  let x0=null; for(let x=420;x<1000&&x0===null;x+=2){let n=0;for(let y=24;y<56;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx>150&&mx-mn>80)n++;} if(n>=3)x0=x;}
+  if(x0===null)return '';
+  let c={Void:0,Magic:0,Force:0,Spirit:0};
+  for(let x=x0;x<x0+40;x+=2)for(let y=22;y<58;y+=2){const [r,g,b]=px(x,y),mx=Math.max(r,g,b),mn=Math.min(r,g,b); if(mx<150||mx-mn<80)continue;
+    if(r>130&&b>130&&g<100)c.Void++; else if(b>r+40&&b>g)c.Magic++; else if(r>g+60&&r>b+60)c.Force++; else if(g>r+40&&g>b)c.Spirit++;}
+  const best=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; return best[1]>12?best[0]:''; }
+const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
+function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
+function snapFaction(t){if(!t)return '';let best=['',99];FACTIONS.forEach(f=>{const v=lev(t,f);if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
+function avgColor(px,x0,y0,x1,y1){let r=0,g=0,b=0,n=0;for(let x=x0;x<x1;x+=2)for(let y=y0;y<y1;y+=2){const p=px(x,y),mx=Math.max(...p),mn=Math.min(...p);if(mx<150||mx-mn<90)continue;r+=p[0];g+=p[1];b+=p[2];n++;}return n?[r/n,g/n,b/n]:[0,0,0];}
+async function readChampDetails(img){
+  const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const role=(((await worker.recognize(crop(img,1150,140,170,45,2,'bw'))).data.text.match(/attack|defen[cs]e|support|hp/i)||[''])[0]   // "BeeAttack" -> Attack
+    .replace(/^\w+$/,w=>({attack:'Attack',defense:'Defense',defence:'Defense',support:'Support',hp:'HP'})[w.toLowerCase()]||w));
+  const fac=snapFaction((await worker.recognize(crop(img,490,255,215,40,2,'bw'))).data.text.replace(/[^A-Za-z' \-]/g,'').trim());
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const rar=rarityByColor(avgColor(px,1162,104,1306,134)), aff=affinityByColor(px);
+  // portrait = roster cell with the bright green selection frame
+  const xs=[30,137,244,351], ys=[185,318,451,584,717]; let best=[0,0,0];
+  ys.forEach((y0,yi)=>xs.forEach((x0,xi)=>{let n=0;for(let x=x0;x<x0+102;x+=2)for(const y of [y0+1,y0+3,y0+122,y0+124]){const [r,g,b]=px(x,y);if(g>200&&r<120&&b<120)n++;} if(n>best[0])best=[n,xi,yi];}));
+  const portrait=best[0]>60?cropURL(img,xs[best[1]]+3,ys[best[2]]+3,97,119):'';
+  Object.assign(champ,{role:/^(Attack|Defense|Support|HP)$/i.test(role)?role:champ.role||'',faction:fac||champ.faction||'',rarity:rar||champ.rarity||'',affinity:aff||champ.affinity||'',portrait:portrait||champ.portrait||''});
+}
+function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
+  if(top===null)return 0; let runs=0,prev=false; for(let x=x0;x<x1;x++){let on=false;for(let y=top;y<top+4;y++){const [r,g,b]=px(x,y);if(r>200&&g>140&&b<100){on=true;break;}} if(on&&!prev)runs++;prev=on;} return Math.min(runs,6);}
+async function heroFromHeader(img,from){
+  const {head,stars}=prep(img);
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  const txt=(await worker.recognize(head)).data.text;
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
+  const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
+  if(!hero.name) setHero({name:m[1].trim(),lvl:m[2],stars},from);
+  else if(!hero.stars&&stars){hero.stars=stars;drawStars();}
+}
+async function processRelic(img){
+  const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
+  { const clean=t=>t.replace(/[^A-Za-z' \-]/g,'').replace(/\s+/g,' ').trim().replace(/\bl(?=[^aeiouy\s])/g,'I');   // capital I read as l
+    const score=t=>t.split(' ').filter(w=>/^[A-Z][a-z']+$/.test(w)||/^(of|the)$/.test(w)).length*2-t.split(' ').length;   // relic names are Title Case
+    const a=clean((await worker.recognize(crop(img,1495,245,405,45,2,'bw'))).data.text), b=clean((await worker.recognize(crop(img,1495,245,405,45,2,'inv'))).data.text);
+    relic.name=score(b)>score(a)?b:a; }
+  relic.level=((await worker.recognize(crop(img,1455,370,80,45,2,'bw'))).data.text.match(/\+?\d+/)||[''])[0].replace(/^(\d)/,'+$1')
+    .replace(/^\+4(\d{2})$/,'+$1');                                              // '+' read as '4': "+415" -> "+15"
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  // bonus boxes: read each box separately (name on top, value below), try two treatments, keep what makes sense
+  const RNAMES=['HP','ATK','DEF','SPD','ACC','RES','C. RATE','C. DMG'];
+  const snapStat=t=>{t=t.toUpperCase().replace(/[^A-Z.]/g,''); if(/RATE/.test(t))return 'C. RATE'; if(/DMG|DM6/.test(t))return 'C. DMG';
+    let best=['',9]; for(const n of ['HP','ATK','DEF','SPD','ACC','RES']){const v=lev(t,n); if(v<best[1])best=[n,v];} return best[1]<=1?best[0]:''; };
+  relic.stats=[];
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  for(const cx of [1516,1638,1760]){
+    let nm='',val='';
+    for(const m of ['inv','bw']){                                   // values are green: 'inv' keeps them, 'bw' often loses them
+      if(!nm){ nm=snapStat((await worker.recognize(crop(img,cx-55,532,110,28,3,m))).data.text); }
+      if(!val){ const raw=(await worker.recognize(crop(img,cx-58,558,116,36,3,m))).data.text;
+        if(/l\s*v\s*[il1|]/i.test(raw)){ const n=(raw.match(/(\d+)\s*$/)||raw.match(/(\d+)/)||['',''])[1]; val='🔒 Lvl '+n; }   // bonus still locked
+        else { const v=raw.replace(/[^\d+,%]/g,''); if(/^\+\d[\d,]*%?$/.test(v))val=v; } }
+      if(!val){ await worker.setParameters({tessedit_char_whitelist:'0123456789+,%'});
+        const v=(await worker.recognize(crop(img,cx-58,558,116,36,3,m))).data.text.replace(/[^\d+,%]/g,'');
+        await worker.setParameters({tessedit_char_whitelist:''}); if(/^\+?\d[\d,]*%?$/.test(v))val=v.startsWith('+')?v:'+'+v; }
+    }
+    if(!nm){ await worker.setParameters({tessedit_pageseg_mode:'8',tessedit_char_whitelist:'ACDEFGHKMPRST.'});
+      for(const m of ['bw','inv']){ if(!nm)nm=snapStat((await worker.recognize(crop(img,cx-55,532,110,28,3,m))).data.text); }
+      await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:''}); }
+    if(nm||val)relic.stats.push([nm,val]);
+  }
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  relic.desc=(await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').trim();
+  relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
+  relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
+  await readChampDetails(img); await heroFromHeader(img,'Relic');
+  document.getElementById('rDrop').style.display='none'; document.getElementById('rErr').style.display='none';
+  document.getElementById('rView').style.display='flex'; document.getElementById('rImg').src=relic.img;
+  {const fc={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'}[relic.rarity]||'#2a3448'; const ri=document.getElementById('rImg'); ri.style.border='3px solid '+fc; ri.style.boxShadow='0 0 12px '+fc+'88';}
+  document.getElementById('rName').value=relic.name; document.getElementById('rDesc').value=relic.desc;
+  document.getElementById('rInfo').innerHTML=`${relic.rarity||'?'} · ${'★'.repeat(relic.stars)} · ${relic.level}<br>${relic.stats.map(([n,v])=>`${n} <b style="color:${/Lvl/.test(v)?'#8a93a6':'#5fd16a'}">${v}</b>`).join(' · ')}`;
+  setBadgeId('rBadge','ok','read ✓'); document.getElementById('rpanel').classList.add('filled');
+}
+async function processBlessing(img){
+  await worker.setParameters({tessedit_pageseg_mode:'7'});
+  // the Blessing sits on the right when the champion has an Aura, centred when it doesn't: find its "BLESSING" heading first
+  let bx=1787;
+  { await worker.setParameters({tessedit_pageseg_mode:'11'}); const k=2;
+    const {data}=await worker.recognize(crop(img,1440,735,460,60,k,'bw'));
+    const w=(data.words||[]).find(w=>/bless/i.test(w.text)); if(w)bx=1440+(w.bbox.x0+w.bbox.x1)/2/k;
+    await worker.setParameters({tessedit_pageseg_mode:'7'}); }
+  bless.name='';
+  for(const m of ['bw','inv']){ if(bless.name.length<3) bless.name=(await worker.recognize(crop(img,Math.max(1440,bx-150),1000,300,42,2,m))).data.text.replace(/[^A-Za-z' \-]/g,'').trim(); }
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  bless.img=cropURL(img,Math.round(bx-88),788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
+  document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
+  document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
+  refreshBlessNote();
+  setBadgeId('bBadge','ok','read ✓'); document.getElementById('bpanel').classList.add('filled');
+}
+function clearPanel(p,obj){Object.keys(obj).forEach(k=>delete obj[k]);const el=document.getElementById(p+'panel');el.classList.remove('filled');
+  [p+'View',p+'Err'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(p+'Drop').style.display='';setBadgeId(p+'Badge','','empty');}
+['r','b'].forEach(p=>{const el=document.getElementById(p+'panel'),fi=document.getElementById(p+'File'),want=p==='r'?'relic':'skills',obj=p==='r'?relic:bless;
+  const go=async f=>{clearPanel(p,obj);const img=await loadImg(f);queue.push({kindWant:want,img});setBadgeId(p+'Badge','busy','queued');pump();};
+  document.getElementById(p+'Drop').addEventListener('click',()=>fi.click());
+  document.getElementById(p+'Clear').addEventListener('click',e=>{e.stopPropagation();clearPanel(p,obj);});
+  fi.addEventListener('change',()=>{if(fi.files[0])go(fi.files[0]);fi.value='';});
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)go(f);});
+  el.addEventListener('click',()=>{document.querySelectorAll('.slot,.tpanel').forEach(s=>s.classList.remove('active'));active=el;el.classList.add('active');});
+  el._go=go;
+});
+document.addEventListener('input',e=>{if(e.target.id==='rName')relic.name=e.target.value;if(e.target.id==='rDesc')relic.desc=e.target.value;if(e.target.id==='bName')bless.name=e.target.value;});
+/* ---------- card preview & download ---------- */
+const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function readSlot(el){
+  const q=c=>el.querySelector(c), v=c=>(q(c)&&q(c).value||'').trim();
+  if(!el.classList.contains('filled')||el.querySelector('.err').style.display==='block')return null;
+  return {slot:el.dataset.slot,icon:q('.thumb img').getAttribute('src'),set:v('.f-set'),name:v('.f-name'),ms:v('.f-ms'),mv:v('.f-mv'),as:v('.f-as'),av:v('.f-av'),
+    subs:[...el.querySelectorAll('.row.sub')].map(r=>({s:r.querySelector('.f-ss').value,r:r.querySelector('.f-sr').value.trim(),v:r.querySelector('.f-sv').value.trim(),g:r.querySelector('.f-sg').value.trim()})).filter(x=>x.s||x.v)};
+}
+// the Relic column of Total Stats tells which stat each relic bonus really is: fix a misread bonus name from it
+function reconcileRelic(){
+  if(!relic.stats||!totals.rows)return;
+  relic.stats=relic.stats.map(([n,v])=>{ const x=tnum(v); if(x===null||isNaN(x))return [n,v];
+    const hit=totals.rows.map((r,i)=>[TROWS[i],r]).filter(([,r])=>r.ok&&r.cells[8]&&tnum(r.cells[8])===x&&(/%/.test(r.cells[8])===/%/.test(v)));
+    return hit.length===1?[hit[0][0],v]:[n,v]; });
+}
+function buildCard(){
+  reconcileRelic();
+  const items=[...document.querySelectorAll('.slot')].map(el=>({slot:el.dataset.slot,d:readSlot(el)}));
+  const name=document.getElementById('hName').value.trim()||'Champion', lvl=document.getElementById('hLvl').value.trim();
+  const sets={}; items.forEach(i=>{if(i.d&&i.d.set)sets[i.d.set]=(sets[i.d.set]||0)+1;});
+  const setChips=Object.entries(sets).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span class="chip set">${esc(k)} ×${n}</span>`).join('');
+  const cards=items.map(({slot,d})=>{
+    if(!d) return `<div class="gc none"><div class="gtop"><div class="ph"></div><div class="gm"><div class="sl">${slot}</div><div class="main"><span>—</span></div></div></div></div>`;
+    const subs=d.subs.map(x=>`<div class="sr"><span>${esc(x.s)}${x.r&&x.r!=='0'?' ('+esc(x.r)+')':''}</span><b>${esc(x.v)}</b><i>${x.g?'+'+esc(x.g):''}</i></div>`).join('');
+    return `<div class="gc"><div class="gtop">${d.icon?`<img src="${d.icon}">`:'<div class="ph"></div>'}<div class="gm"><div class="sl">${slot}</div>
+      <div class="main"><span>${esc(d.ms)}</span><b>${esc(d.mv)}</b></div>${d.as?`<div class="asc"><span>${esc(d.as)}</span><b>+${esc(d.av)}</b></div>`:''}
+      ${d.name?`<div class="setn">${esc(d.name)}</div>`:''}${d.set?`<div class="setn">${esc(d.set)}</div>`:''}</div></div><div class="subs">${subs}</div></div>`;}).join('');
+  const stars='★'.repeat(hero.stars||0);
+  const rows=['HP','ATK','DEF','SPD','C. RATE','C. DMG','RES','ACC','Ignore DEF'];
+  const cols=['Basic<br>Stats','Artifacts','Affinity<br>Bonuses','Classic<br>Arena','Masteries','Faction<br>Guardians','Empower-<br>ment','Blessing','Relic','Area<br>Bonuses','Total'];
+  const cls=j=>j===9?'ar':(j===10?'tot':'');
+  const has=!!totals.rows, tcolor=j=>j===1||j===9?'g':(j===0?'w':(j===10?'':'w'));
+  const table=`<table><tr><th></th>${cols.map((c,j)=>`<th class="${cls(j)}">${c}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr><td class="rk">${r}</td>${cols.map((c,j)=>{const v=has?(totals.rows[i].cells[j]||''):'·';return `<td class="${cls(j)} ${has?tcolor(j):''}">${esc(v)}</td>`;}).join('')}</tr>`).join('')}</table>`;
+  const area=(totals.area||'').trim(), noArea=!area||/no\s*area/i.test(area)||/^\W*area\s*selected\W*$/i.test(area);
+  const headRight=has?(noArea?`<div class="ctx"><div class="l">Area Bonuses</div><div class="v" style="color:#7f8aa3">None</div><div class="abadge" style="border-color:#3a4660;background:#1b2333;color:#8c97ae">Total Stats without area bonuses</div></div>`
+     :`<div class="ctx"><div class="l">Area Bonuses</div><div class="v">${esc(area)}</div><div class="abadge">✓ Included in Total Stats</div></div>`):'';
+  const tTag=has?`<span class="sab">Showing Area Bonuses for: <b style="color:#9fe6dc">${esc(area||'No Area Selected')}</b></span>`:`<span class="sab">Area Bonuses: not added yet</span>`;
+  const tNote=has?`<div style="margin-top:14px;font-size:13px;color:#7f8aa3">The total Artifact bonus includes Artifact Set bonuses, individual Artifact bonuses, and Accessory bonuses.</div>`:'';
+  const mc=mast.counts?mast.counts.filter(c=>c[1]>0).map(c=>`${c[0]} ${c[1]}`).join(' · '):'';
+  const mBody=mast.img?`<img src="${mast.img}" style="width:100%;border-radius:10px;display:block">`:`<div class="empty" style="padding:120px 16px"><b>Masteries</b>not added yet</div>`;
+  const bstars=hero.stars?`<span style="color:#ff3b3b;letter-spacing:1px">${'★'.repeat(hero.stars)}</span>`:'';
+  const rarCol={Mythical:'#ff6b5a',Legendary:'#f0cf7a',Epic:'#d77cf2',Rare:'#7fb6ff',Uncommon:'#7be07a'}, affCol={Void:'#d4a6ff',Magic:'#7fb6ff',Force:'#ff8a7a',Spirit:'#7be07a'};
+  const cChips=[champ.rarity?`<span class="chip" style="border-color:${rarCol[champ.rarity]||'#2e3850'};color:${rarCol[champ.rarity]||'#d9dee8'}">${champ.rarity}</span>`:'',
+    champ.affinity?`<span class="chip" style="border-color:${affCol[champ.affinity]};color:${affCol[champ.affinity]}">${champ.affinity}</span>`:'',
+    champ.faction?`<span class="chip">${esc(champ.faction)}</span>`:'', champ.role?`<span class="chip">${esc(champ.role)}</span>`:''].join('');
+  const rCol={Mythical:'#e0452f',Legendary:'#e8961f',Epic:'#b65ae6',Rare:'#3b82e6',Uncommon:'#4caf50',Common:'#9aa3b2'};
+  const rFrame=rCol[relic.rarity]||'#2f5866';
+  const relicBody=relic.name?`<div class="relic"><img class="art" src="${relic.img}" style="border:3px solid ${rFrame};box-shadow:0 0 14px ${rFrame}88"><div><div class="rn">${esc(relic.name)}</div>
+      ${relic.rarity?`<span class="myth" style="background:${rCol[relic.rarity]||'#555'}">${relic.rarity}</span>`:''} <span style="color:#f0cf7a">${'★'.repeat(relic.stars||0)} ${esc(relic.level||'')}</span>
+      <div class="rs">${(relic.stats||[]).map(([n,v])=>`<div${/Lvl/.test(v)?' class="lk"':''}>${esc(n)}<b>${esc(v)}</b></div>`).join('')}</div></div></div>
+      <div style="flex:1;display:flex;align-items:center"><div class="rd">${esc(relic.desc)}</div></div><img class="sets" src="${relic.sets}">`:`<div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center"><b>Relic</b>not added yet</div>`;
+  const blessBody=bless.name?`<div class="brow"><img src="${bless.img}"><div><div class="bl2">Blessing</div><div class="bn">${esc(bless.name)}</div><div class="bs">${bstars}</div></div></div>`
+      :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">not added yet</div><div class="bs">${bstars}</div></div></div>`;
+  return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
+    <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
+    <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
+    <div class="row2">
+      <div class="panel"><div class="pt">Gear<small><span style="color:#5fd16a">green</span> = glyph bonus</small></div><div class="gear">${cards}</div></div>
+      <div style="display:flex;flex-direction:column;gap:22px;margin-top:22px"><div class="panel rpan" style="margin-top:0"><div class="pt">Relic</div>${relicBody}</div>
+        <div class="panel" style="margin-top:0">${blessBody}</div></div>
+    </div>
+    <div class="row2">
+      <div class="panel"><div class="pt">Total Stats${tTag}</div>${table}${tNote}</div>
+      <div class="panel" style="display:flex;flex-direction:column"><div class="pt">Masteries${mc?`<small>${mc}</small>`:''}</div><div style="flex:1;display:flex;flex-direction:column;justify-content:center">${mBody}</div></div>
+    </div>
+    <div class="foot"><span>Raid: Shadow Legends</span><span>${esc(name)} · build card</span></div></div>`;
+}
+function fitStage(){const st=document.getElementById('stage'),c=document.getElementById('card');if(!c)return;
+  const k=Math.min(1,(window.innerWidth-48)/c.offsetWidth); st.style.transform=`scale(${k})`; st.style.width=c.offsetWidth+'px'; st.style.height=(c.offsetHeight*k)+'px';}
+document.getElementById('btnPreview').addEventListener('click',()=>{
+  document.getElementById('stage').innerHTML=buildCard(); document.getElementById('modal').style.display='block'; fitStage();});
+document.getElementById('btnClose').addEventListener('click',()=>{document.getElementById('modal').style.display='none';});
+window.addEventListener('resize',fitStage);
+document.getElementById('btnSave').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnSave'), st=document.getElementById('stage'), c=document.getElementById('card');
+  btn.textContent='Saving…'; const prev=st.style.transform; st.style.transform='none';
+  try{ await document.fonts.ready;
+    const canvas=await html2canvas(c,{backgroundColor:'#0b0f16',scale:1,useCORS:true});
+    const a=document.createElement('a'); a.download=((document.getElementById('hName').value||'champion').trim().replace(/\s+/g,'_'))+'_build.png';
+    a.href=canvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove();
+  }catch(err){alertBox('Could not create the image: '+err);}
+  st.style.transform=prev; btn.textContent='Download PNG';
+});
+function alertBox(t){setStatus(t);}
+function setActive(el){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('active'));el.classList.add('active');active=el;}
+document.addEventListener('paste',e=>{
+  const items=[...(e.clipboardData||{}).items||[]].filter(i=>i.type.startsWith('image/'));
+  if(!active){ if(items.length){e.preventDefault();handleBulk(items.map(i=>i.getAsFile()));} return; }
+  const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith('image/'));
+  if(it&&(active.id==='rpanel'||active.id==='bpanel')){e.preventDefault();active._go(it.getAsFile());return;}
+  if(it&&active.id==='mpanel'){e.preventDefault();window._goMasteries(it.getAsFile());return;}
+  if(it&&active.id==='tpanel'){e.preventDefault();clearTotals();loadImg(it.getAsFile()).then(img=>{queue.push({totals:true,img});setTBadge('busy','queued');pump();});return;}
+  if(it){e.preventDefault();handle(active,it.getAsFile());}
+});
+const setStatus=t=>document.getElementById('status').textContent=t;
+function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge '+cls;b.textContent=txt;}
+
+/* ---------- OCR engine ---------- */
+(async()=>{
+  try{
+    worker=await Tesseract.createWorker('eng',1,{workerPath:new URL('worker-wrap.js',location.href).href,corePath:new URL('./',location.href).href,langPath:new URL('./',location.href).href,gzip:false,workerBlobURL:false});
+    await worker.setParameters({tessedit_pageseg_mode:'6'});
+    setStatus('Ready — add your screenshots.'); pump();
+  }catch(err){setStatus('Could not start the text reader: '+err);}
+})();
+
+function handle(el,f){
+  const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
+}
+async function pump(){
+  if(busy||!worker||!queue.length)return; busy=true;
+  const job=queue.shift();
+  if(!job.prepped&&!job.normalized){ try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
+  const {el,img}=job;
+  if(job.totals||job.kindWant||job.unknown){
+    try{
+      if(job.totals){ await processTotals(img); }
+      else{
+        if(job.unknown){ const hl=(job.kindGuess==='item'||!job.kindGuess)?await identifySlot(img):null;
+          if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`);
+            if(job.batch&&job.batch.used[hl]){ if(job.tag){job.tag.className='no';job.tag.textContent=`✗ ${job.name}: second ${hl} — skipped`;} }
+            else { if(job.batch)job.batch.used[hl]=1; if(el2.classList.contains('filled'))clearSlot(el2);
+              queue.unshift({el:el2,img,prepped:true,normalized:true}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl}`;} }
+            busy=false; pump(); return; } }
+        setStatus('Reading screenshot…'); const kind=await screenKind(img);
+        if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
+          if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
+          else { let im=img,k2=kind; if(!job.normalized){const img2=await findGame(img); if(img2){im=img2;k2=await screenKind(img2);}}
+            if(k2===job.kindWant){ if(p==='r')await processRelic(im); else if(p==='b')await processBlessing(im); else processMasteries(im); }
+            else panelWrong(p,PHELP[p],await whatIs(im,k2),im); } }
+        else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
+        else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
+        else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
+        else if(kind==='skills'){ clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} }
+        else if(!job.normalized){ const img2=await findGame(img);
+          if(img2){ const hl=highlightSlot(img2);
+            if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`); if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:img2}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (game found in the picture)`;} }
+            else queue.unshift({unknown:true,img:img2,tag:job.tag,name:job.name,normalized:true}); }
+          else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — make sure it's a screenshot of the game`; } }
+        else if(job.kindGuess==='relic'||job.kindGuess==='skills'){ await readChampDetails(img); await heroFromHeader(img,'champion screen'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${job.name}: champion details (name, rarity, faction, role)`;} }
+        else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: not recognised — for the Blessing, open the champion from your own roster (Skills tab), not from the Champion Index`; }
+      }
+    }catch(err){console.error(err);}
+    busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump(); return; }
+  try{
+    badge(el,'busy','reading…'); setStatus(`Reading ${el.dataset.slot}…`);
+    const {bw,icon,valCrop,head,stars}=prep(img);
+    el.querySelector('.thumb img').src=icon;
+    const {data}=await worker.recognize(bw);
+    const item=parse(data.text);
+    await worker.setParameters({tessedit_char_whitelist:'0123456789+%'});
+    const nums=(await worker.recognize(valCrop)).data.text.split('\n').map(l=>l.replace(/\s+/g,'')).filter(Boolean);
+    await worker.setParameters({tessedit_char_whitelist:''});
+    mergeNums(item,nums);
+    await rowCheck(img,item);
+    await worker.setParameters({tessedit_pageseg_mode:'7'});
+    const ht=(await worker.recognize(head)).data.text;
+    await worker.setParameters({tessedit_pageseg_mode:'6'});
+    let bad=checkSlot(el,item,data.text,(job.kindGuess==='item'||!job.kindGuess)?await identifySlot(img):null);
+    if(bad&&bad.probe&&!job.normalized){ const img2=await findGame(img);
+      if(img2){ queue.unshift({el,img:img2,normalized:true}); busy=false; pump(); return; } }
+    if(bad&&bad.probe){ const k=await screenKind(img); if(k)bad={msg:`This is the <b>${KNAME[k]}</b> screenshot, not ${el.dataset.slot}.`,moveKind:k}; }
+    if(bad){ showErr(el,bad,img); }
+    else { applyHero(el,ht,stars); fill(el,item,data.text); }
+  }catch(err){badge(el,'warn','error');console.error(err);}
+  busy=false; setStatus(queue.length?'Reading…':'Done — check the fields.'); pump();
+}
+
+/* crop the item window (top-left), upscale x3, keep light text, drop dark/blue background */
+function prep(img){
+  const s=img.naturalWidth/1920;              // layout scales with width (16:9 screenshots)
+  const cx=25*s,cy=0,cw=475*s,ch=290*s,k=3*(1/s);
+  const c=document.createElement('canvas'); c.width=Math.round(cw*k); c.height=Math.round(ch*k);
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(...src(img,25,0,475,290),0,0,c.width,c.height);
+  const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+  for(let i=0;i<p.length;i+=4){const r=p[i],gg=p[i+1],b=p[i+2];
+    const dark=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120);
+    const v=dark?0:255; p[i]=p[i+1]=p[i+2]=v;}
+  g.putImageData(d,0,0);
+  const ic=document.createElement('canvas'); ic.width=ic.height=128;
+  ic.getContext('2d').drawImage(...src(img,36,50,96,96),0,0,128,128);
+  // value column of the 4 substat rows (x 255–480, y 155–290 @1920)
+  const vx=255*s,vy=155*s,vw=225*s,vh=135*s,vk=3/s;
+  const v=document.createElement('canvas'); v.width=Math.round(vw*vk); v.height=Math.round(vh*vk);
+  const vg=v.getContext('2d'); vg.imageSmoothingQuality='high'; vg.drawImage(...src(img,255,155,225,135),0,0,v.width,v.height);
+  const vd=vg.getImageData(0,0,v.width,v.height),vp=vd.data;
+  for(let i=0;i<vp.length;i+=4){const r=vp[i],gg=vp[i+1],b=vp[i+2];
+    const t=Math.max(r,gg,b)>165 && !(b>r+40 && b>gg-10 && r<120); vp[i]=vp[i+1]=vp[i+2]=t?0:255;}
+  vg.putImageData(vd,0,0);
+  // champion header: name + level (x 560–1330, y 10–70 @1920)
+  const hx=560*s,hy=10*s,hw=770*s,hh=60*s,hk=2/s;
+  const h=document.createElement('canvas'); h.width=Math.round(hw*hk); h.height=Math.round(hh*hk);
+  const hg=h.getContext('2d'); hg.drawImage(img,hx,hy,hw,hh,0,0,h.width,h.height);
+  const hd=hg.getImageData(0,0,h.width,h.height),hp=hd.data;
+  for(let i=0;i<hp.length;i+=4){const t=(hp[i]*.3+hp[i+1]*.59+hp[i+2]*.11)>170;hp[i]=hp[i+1]=hp[i+2]=t?0:255;}
+  hg.putImageData(hd,0,0);
+  // red stars: count runs of strongly red columns across the header band
+  const sc=document.createElement('canvas'); const sw=Math.round(900*s), sh=Math.round(35*s);
+  sc.width=sw; sc.height=sh; const sg=sc.getContext('2d'); sg.drawImage(img,520*s,25*s,900*s,35*s,0,0,sw,sh);
+  const sd=sg.getImageData(0,0,sw,sh).data; let runs=0,prev=false; const need=Math.max(3,Math.round(4*s));
+  for(let x=0;x<sw;x++){let n=0;for(let y=0;y<sh;y++){const k=(y*sw+x)*4;if(sd[k]>200&&sd[k+1]<75&&sd[k+2]<75)n++;}
+    const on=n>=need; if(on&&!prev)runs++; prev=on;}
+  return {bw:c,icon:ic.toDataURL(),valCrop:v,head:h,stars:Math.min(runs,6)};
+}
+
+/* ---------- parsing ---------- */
+function normStat(t){
+  t=t.toUpperCase().replace(/[©€]\.?|\(\./g,'C.').replace(/\s+/g,' ').trim();
+  t=t.replace(/^C\.? ?DMG/,'C. DMG').replace(/^C\.? ?RATE/,'C. RATE');
+  return STATS.find(s=>t.startsWith(s))||null;
+}
+const STAT_RE='(HP|ATK|DEF|SPD|RES|ACC|[C©€]\\.? ?DMG|[C©€]\\.? ?RATE)';
+function fixNum(v,stat){
+  v=v.replace(/[\/|]/g,'7').replace(/[Oo]/g,'0').replace(/[lI]/g,'1').replace(/[Ss](?=\d|%|$)/g,'5');
+  return v;
+}
+function splitGlyph(raw,stat){
+  // "36+7", "6%+8%", "64436" (lost '+'), "11+8 [MAX]"
+  raw=fixNum(raw.replace(/\[?MAX\]?/i,'').trim(),stat);
+  // the green '%' of a glyph comes out as '°', '%%' or '%6' in some browsers: "6%+3°%%", "6%+3%6" -> "6%+3%"
+  raw=raw.replace(/°/g,'%').replace(/%{2,}/g,'%'); {const q=raw.match(/^(\d+%)\s*\+\s*(\d+%)\S+$/); if(q)raw=q[1]+'+'+q[2];}
+  let m=raw.match(/^(\d+%?)\s*\+\s*(\d+%?)$/);
+  if(m){ // a % stat always gets a % glyph; the green '%' is often lost or read as digits ("+4%" -> "455")
+    let v=m[1],g=m[2],sure=true;
+    if(v.endsWith('%')&&!g.endsWith('%')){ if(+g<=20)g+='%'; else { let k='',n=0; for(let i=1;i<g.length;i++)if(+g.slice(0,i)<=20&&+g.slice(0,i)>0){k=g.slice(0,i);n++;} g=k?k+'%':''; sure=n===1; } }
+    return {v,g,sure}; }
+  // two numbers with only a space between them: the '+' was lost
+  m=raw.match(/^(\d+%?)\s+(\d+%?)$/);
+  if(m) return {...splitGlyph(m[1]+'+'+m[2],stat),sure:false};
+  m=raw.match(/^(\d+%?)$/);
+  if(m){
+    const n=parseInt(m[1]),pct=m[1].endsWith('%');
+    const limit=stat==='HP'?2000:(pct?40:400);
+    if(n>limit){ // a '+' was probably read as '4' — try every '4' and keep the plausible split
+      const d=m[1].replace('%',''), gl=stat==='HP'?900:(pct?20:80); let best=null;
+      for(let i=1;i<d.length-1;i++){ if(d[i]!=='4')continue;
+        const a=parseInt(d.slice(0,i)), b=parseInt(d.slice(i+1));
+        if(a<=limit && b>0 && b<=gl){ best={v:d.slice(0,i)+(pct?'%':''),g:d.slice(i+1)+(pct?'%':''),sure:false}; break; } }
+      return best||{v:m[1],g:'',sure:false};
+    }
+    return {v:m[1],g:'',sure:true};
+  }
+  return {v:raw,g:'',sure:false};
+}
+function parse(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const it={set:'',name:'',main:null,asc:null,subs:[]};
+  // special accessories carry their own name in the title ("Revenge Amulet"); standard ones just say "Amulet"
+  { const m=(lines[0]||'').match(/((?:[A-Z][a-z']+\s+){1,3})(Ring|Amulet|Banner)\b/); if(m) it.name=(m[1]+m[2]).trim(); }
+  for(const ln of lines){
+    let m=ln.match(/Set:\s*([A-Za-z' ]+)/i); if(m){it.set=m[1].replace(/\s+x$/i,'').trim();continue;}
+    if(!it.main){
+      // main line: "... +16] ATK 265 ATK 80" / "HP 600" — first stat+number pair(s) on the line
+      const re=new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'); const pairs=[...ln.matchAll(re)];
+      if(pairs.length && !/^\s*[A-Z©€.\s]+\(\d\)/i.test(ln) && (/\+1\d|\]|^\W/.test(ln)||pairs.length===2||lines.indexOf(ln)<=3)){
+        it.main={s:normStat(pairs[0][1]),v:pairs[0][2]};
+        if(pairs[1])it.asc={s:normStat(pairs[1][1]),v:pairs[1][2]};
+        continue;
+      }
+    }
+    if(it.main && it.subs.length<4){
+      m=ln.match(new RegExp('^'+STAT_RE+'\\s*(?:\\((\\d)\\))?\\s+(.+)$','i'));
+      if(m){const s=normStat(m[1]); const gl=splitGlyph(m[3],s); it.subs.push({s,r:m[2]||'',...gl});}
+    }
+  }
+  return it;
+}
+// slot name in the item window title: ignore the "Set: …" line (there is a set called Shield) and OCR spaces ("Wea pon")
+function slotWord(text){ const head=String(text||'').split('\n').filter(l=>l.trim()).filter(l=>!/set\s*[:;]/i.test(l)).slice(0,2).join('').replace(/\s+/g,'');
+  return Object.keys(ARMOR).find(k=>new RegExp(k,'i').test(head))||null; }
+const ARMOR={Weapon:'Weapon',Helmet:'Helmet',Shield:'Shield',Gauntlets:'Gloves',Chestplate:'Chest',Boots:'Boots',Ring:'Ring',Amulet:'Amulet'};   // no 'Banner': the faction 'Banner Lords' would match it
+const ACC_MAIN={Ring:['HP','ATK','DEF'],Amulet:['HP','ATK','DEF','C. DMG'],Banner:['HP','ATK','DEF','ACC','RES']};
+function checkSlot(el,item,text,hl){
+  const want=el.dataset.slot;
+  if(hl) return hl===want?null:{msg:`This is the <b>${hl}</b> screenshot, not ${want}.`,move:hl};
+  if(!item.set && !item.main) return {probe:true,msg:`This doesn't look like an item screenshot. In the game, tap the equipped <b>${want}</b> so its details window opens top-left, then screenshot the whole screen.`+TIP};
+  const found=slotWord(text);
+  const isAcc=!!ACC_MAIN[want];
+  if(found){
+    const got=ARMOR[found];
+    if(got!==want) return {msg:`This is a <b>${got}</b> screenshot, not ${want}.`,move:got};
+    return null;
+  }
+  // no armour slot name in the window → it is an accessory (the game shows the faction there instead)
+  if(!isAcc){
+    const ms=item.main&&item.main.s;
+    const fit=Object.keys(ACC_MAIN).filter(k=>!ms||ACC_MAIN[k].includes(ms));
+    return fit.length===1
+      ? {msg:`This is an accessory — with <b>${ms}</b> as main stat it must be the <b>${fit[0]}</b>, not ${want}.`,move:fit[0]}
+      : {msg:`This is an accessory, not ${want}. The game doesn't show which one — pick where it goes:`,moves:fit};
+  }
+  const ms=item.main&&item.main.s;
+  if(ms && !ACC_MAIN[want].includes(ms)){
+    const fit=Object.keys(ACC_MAIN).filter(k=>ACC_MAIN[k].includes(ms));
+    return {msg:`A ${want} can't have <b>${ms}</b> as its main stat — this is probably ${fit.length?('the <b>'+fit.join(' or ')+'</b>'):'another item'}.`,move:fit.length===1?fit[0]:null};
+  }
+  return null;
+}
+function showErr(el,e,img){
+  const box=el.querySelector('.err');
+  const targets=e.moveKind?[KNAME[e.moveKind]]:(e.moves||(e.move?[e.move]:[]));
+  box.innerHTML='⚠ '+e.msg+(targets.length?'<br>'+targets.map(t=>`<button class="mv" data-to="${t}" style="margin-right:6px">${targets.length>1?t:'Move it to '+t}</button>`).join(''):'');
+  box.style.display='block'; badge(el,'bad','wrong screenshot'); el.classList.add('filled');
+  el.querySelector('.drop').style.display='none';
+  box.querySelectorAll('.mv').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();
+    if(e.moveKind){ clearSlot(el); queue.push({unknown:true,img}); pump(); return; }
+    const target=document.querySelector(`.slot[data-slot="${b.dataset.to}"]`); clearSlot(el); if(target.classList.contains('filled'))clearSlot(target);
+    queue.push({el:target,img}); badge(target,'busy','queued'); pump(); }));
+}
+function applyHero(el,txt,stars){
+  el._hero=null;
+  const t=txt.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');           // drop the "2,191/2,200" storage counter
+  const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i);
+  const mis=el.querySelector('.mis'); mis.style.display='none';
+  if(!m)return;
+  const name=m[1].trim(), lvl=m[2]; el._hero={name,lvl,stars};
+  if(!hero.name){
+    setHero({name,lvl,stars},el.dataset.slot);
+  }else if(name.toLowerCase()!==hero.name.toLowerCase()){
+    mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
+  }
+}
+// third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
+async function rowCheck(img,it){
+  // used only as a referee: alone it is often wrong, so it never overrides two agreeing readings
+  await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789+%'});
+  try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
+    const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
+    if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
+    const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+    const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
+    if(row===cur)continue;
+    if(dig!==null&&dig===row){ sub.v=row; sub.g=sub.ng||sub.g; sub.sure=true; continue; }   // outvoted 2:1
+    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur)))continue;             // a dropped digit is not a conflict
+    sub.sure=false;                                                                       // no majority → ask to check
+  } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
+}
+function mergeNums(it,nums){
+  // digits-only reading of the value column; trust it when it parses cleanly
+  it.subs.forEach((sub,i)=>{
+    const t=(nums[i]||'').replace(/MAX$/,''); if(!t)return;
+    const r=splitGlyph(t,sub.s); sub.nv=r.v; sub.ng=r.g||'';
+    // green '+' read as '4+' in the first pass ("17+15" -> "174+15"); the digits pass saw it right
+    if(r.sure && sub.g && r.g===sub.g && sub.v===r.v+'4'){ sub.v=r.v; sub.sure=true; return; }
+    if(sub.sure && /^\d+%?$/.test(sub.v||''))return;                 // first reading clean — keep it
+    const firstOk=/^\d+%?$/.test(sub.v||'');
+    if(firstOk && r.v===sub.v && (r.g||'')===(sub.g||'')){ sub.sure=true; return; } // both readings agree
+    if(!firstOk && r.sure && /^\d+%?$/.test(r.v)){ sub.v=r.v; sub.g=r.g; sub.sure=true; return; } // first was garbage, digits clean
+    if(r.v && /^\d/.test(r.v) && !firstOk){ sub.v=r.v; sub.g=r.g; sub.sure=false; } // best guess, ask to confirm
+  });
+}
+function fill(el,it,raw){
+  el.querySelector('.err').style.display='none';
+  el.querySelector('.drop').style.display='none';
+  el.querySelector('.thumb').style.display='flex';
+  el.querySelector('.form').style.display='block';
+  el.querySelector('.setname').textContent=[it.name,it.set?('Set: '+it.set):''].filter(Boolean).join(' · ');
+  const q=c=>el.querySelector(c); let issues=0;
+  const set=(node,val,ok=true)=>{node.value=val||'';node.classList.toggle('bad',!ok);if(!ok)issues++;};
+  const acc=!!ACC_MAIN[el.dataset.slot];
+  set(q('.f-set'),it.set,!!it.set||acc);   // standard faction accessories have no set
+  q('.namerow').style.display=acc?'':'none'; set(q('.f-name'),acc?it.name:'');
+  set(q('.f-ms'),it.main&&it.main.s,!!(it.main&&it.main.s));
+  set(q('.f-mv'),it.main&&it.main.v,!!(it.main&&it.main.v));
+  set(q('.f-as'),it.asc&&it.asc.s); set(q('.f-av'),it.asc&&it.asc.v);
+  el.querySelectorAll('.row.sub').forEach((r,i)=>{
+    const s=it.subs[i]||{};
+    set(r.querySelector('.f-ss'),s.s,!!s.s);
+    set(r.querySelector('.f-sr'),s.r);
+    set(r.querySelector('.f-sv'),s.v,!!s.v&&s.sure!==false);
+    set(r.querySelector('.f-sg'),s.g,s.sure!==false);
+  });
+  q('.raw').textContent=raw;
+  state[el.dataset.slot]=it; el.classList.add('filled');
+  badge(el,issues?'warn':'ok',issues?`${issues} to check`:'read ✓');
+}
+</script>
+</body>
+</html>
