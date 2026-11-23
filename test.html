@@ -342,7 +342,9 @@ $('simRun').onclick=async()=>{
     const rec={browser:BROWSER+' '+BVER,screen:r,mode:m,format:f,timeMs:ms,recognised:`${recog}/${set_.length}`,failed:fails,flagged,differences:diffs,errors:errs.slice(),diagnostics:diag,files:set_.map(x=>x.name),result:snap};
     const fname=`${set}_${BROWSER}_${batch}_${String(i+1).padStart(2,'0')}_${r}_${m}_${f}.json`; const where=await writeLog(fname,JSON.stringify(rec,null,1));
     if(cardPng){ await writeBlob(fname.replace(/\.json$/,'_card.png'),cardPng.blob);
-      const cls2=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
+      // a difference in an item that the reader itself marked "to check" is caught, not silent: amber, not red
+      const silent=diffs.filter(d=>{ const m=d.match(/^slots\.(\w+)/); return !(m&&snap.slots[m[1]]&&snap.slots[m[1]].flagged.length); });
+      const cls2=fails.length||silent.length?'bad':(flagged.length||diffs.length?'warn':'ok');
       $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' ('+RATIO(r)+') · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
     const cls=fails.length||diffs.length?'bad':(flagged.length?'warn':'ok');
@@ -561,7 +563,7 @@ const POP_H=534.5, POP_X=9.5, POPS={};
 const RBOX=[1515,1637,1760], RROW=546, RLEFT=1459;
 async function panelWords(img){                                  // words of the right part of the screen, read once per screenshot
   if(img._pw)return img._pw;
-  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:1.5;
+  const W=img.naturalWidth,H=img.naturalHeight,x0=Math.round(W*0.55),k=W<1700?2:Math.min(1.5,2880/W);
   const c=document.createElement('canvas');c.width=Math.round((W-x0)*k);c.height=Math.round(H*k);
   const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,x0,0,W-x0,H,0,0,c.width,c.height);
   await worker.setParameters({tessedit_pageseg_mode:'11'}); const {data}=await worker.recognize(c); await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -589,7 +591,7 @@ async function relicAnchor(img){
       if(!xs.length||b.x-xs[xs.length-1]>a.h*2.5)xs.push(b.x); }
     if(xs.length<2)continue; const sh=a.h/18;                                  // bonus names are about 18 units tall
     let sc=null; for(let i=1;i<xs.length;i++){ const gap=xs[i]-xs[i-1], n=Math.max(1,Math.round(gap/(122*sh))); if(n<=2){ const v=gap/(122*n); if(!sc)sc=v; else sc=(sc+v)/2; } }
-    if(!sc||sc<0.25||sc>2)continue;
+    if(!sc||sc<0.25||sc>Math.max(img.naturalWidth/1920,img.naturalHeight/1080)*1.1)continue;   // the game can't be bigger than the picture
     // a value (+number or locked "Lvl") must sit under the names
     const vals=ws.filter(v=>v.y>a.y+8*sc&&v.y<a.y+50*sc&&/^\+?\d|lvl|lv/i.test(v.t)).length; if(!vals)continue;
     const score=xs.length*2+vals; if(!best||score>best.score)best={score,xs,y:a.y,s:sc,words:ws};
@@ -635,7 +637,7 @@ function vAnchorOf(kind,x,y){
   return y>=740?'B':'T';
 }
 async function ocrWords(img){
-  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):1;
+  const W=img.naturalWidth, up=W<1800?Math.min(2,1900/W):(W>2400?1920/W:1);   // read big screens at the reference size
   const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
   const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
   await worker.setParameters({tessedit_pageseg_mode:'11'});
@@ -672,9 +674,11 @@ function fitKind(kind,words,imgW){
     const a=M[i],b=M[j]; let sc=null;
     if(Math.abs(b.r[1]-a.r[1])>120&&a.va===b.va) sc=(b.o.y-a.o.y)/(b.r[1]-a.r[1]);
     else if(a.a===b.a&&Math.abs(b.r[0]-a.r[0])>200&&Math.abs(b.r[1]-a.r[1])<40) sc=(b.o.x-a.o.x)/(b.r[0]-a.r[0]);
-    if(!sc||sc<0.3||sc>1.8)continue;
+    if(!sc||sc<0.3||sc>imgW/1920*1.1)continue;                       // no fixed upper limit: 4K and 5K screens are bigger than 1.8
     if(a.va!=='T')continue; const y0=a.o.y-sc*a.r[1]; const offs={}; offs[a.a]=a.o.x-sc*(a.r[0]-ABASE[a.a]);
     const h=evalH(sc,y0,offs); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
+  // the plainest guess is always on the table: the game fills the picture
+  { const h=evalH(imgW/1920,0,{C:imgW/2}); if(h&&(!best||h.n>best.n||(h.n===best.n&&h.res<best.res)))best=h; }
   return best;
 }
 function drawNormalized(img,kind,F){
@@ -727,7 +731,7 @@ async function autoNormalize(img){
 /* ---------- find the game inside any screenshot (taskbar, window borders, smaller window) ---------- */
 const REFWORDS={"rate":[[105,173],[1524,917],[105,237],[100,656]],"sell":[[1316,150]],"filter":[[1184,152]],"automatically":[[623,234]],"equips":[[758,238]],"your":[[832,238]],"champion":[[929,234],[234,423]],"recommended":[[688,264]],"artifacts":[[838,264],[128,375],[102,363],[336,320]],"boost":[[966,264],[1012,264]],"their":[[565,298]],"performance":[[680,300]],"artifact":[[892,352],[231,992],[524,992],[915,992]],"storage":[[1025,356]],"equipped":[[238,378],[328,408],[1629,224]],"bonus":[[126,406],[322,992]],"total":[[1664,702],[1850,320],[149,992]],"stats":[[1735,702],[194,320]],"accessories":[[862,265],[1055,352]],"compatible":[[856,356]],"showing":[[1224,228]],"basic":[[132,320]],"classic":[[598,320]],"arena":[[674,320]],"masteries":[[808,320]],"faction":[[998,306]],"empowerment":[[1174,323]],"blessing":[[1357,322]],"relic":[[1534,320],[1738,222]],"guardians":[[984,334]],"ignore":[[76,918]],"includes":[[420,992]],"individual":[[802,992]],"accessory":[[1204,995]],"offense":[[330,150]],"defense":[[960,150],[1250,162]],"support":[[1590,150]],"info":[[1278,208]],"power":[[1248,336]],"skins":[[1252,574]],"lore":[[618,596]]};
 async function locateGame(img,upForce,bin){
-  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):1);
+  const W=img.naturalWidth, up=upForce||(W<1700?Math.min(2,1900/W):(W>2400?1920/W:1));
   const c=document.createElement('canvas'); c.width=Math.round(W*up); c.height=Math.round(img.naturalHeight*up);
   const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(img,0,0,c.width,c.height);
   if(bin){const d=g.getImageData(0,0,c.width,c.height),p=d.data;for(let i=0;i<p.length;i+=4){const l=p[i]*.3+p[i+1]*.59+p[i+2]*.11,v=l>170?0:255;p[i]=p[i+1]=p[i+2]=v;}g.putImageData(d,0,0);}
@@ -744,7 +748,7 @@ async function locateGame(img,upForce,bin){
     const a=O[i],b=O[j],dob=Math.hypot(b.x-a.x,b.y-a.y); if(dob<150)continue;
     for(const r1 of REFWORDS[a.t])for(const r2 of REFWORDS[b.t]){
       const dref=Math.hypot(r2[0]-r1[0],r2[1]-r1[1]); if(dref<250)continue;
-      const s=dob/dref; if(s<0.35||s>1.7)continue;
+      const s=dob/dref; if(s<0.35||s>Math.max(img.naturalWidth/1920,img.naturalHeight/1080)*1.1)continue;
       const ang=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r2[1]-r1[1],r2[0]-r1[0]); if(Math.abs(Math.atan2(Math.sin(ang),Math.cos(ang)))>0.04)continue;
       const tx=a.x-s*r1[0],ty=a.y-s*r1[1]; const [n,res]=score(s,tx,ty);
       if(!best||n>best.n||(n===best.n&&res<best.res))best={s,tx,ty,n,res,span:dob};
@@ -811,6 +815,14 @@ async function readRow(img,y){
   for(const cells of [...out,m0]) for(let j=1;j<10;j++){ const c=cells[j]; if(!c)continue;
     for(let q=0;q<c.length;q++){ if(!/\d/.test(c[q]))continue; const t=c.slice(0,q)+c.slice(q+1); if(!/\d/.test(t))continue;
       const try_=cells.slice(); try_[j]=t; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } }
+  // the three readings disagree on a cell, or one glyph was misread (0/8, 3/8, 5/6, 1/7): try each candidate for each
+  // cell — if exactly one of them makes the row add up to its total, the total proves it
+  if(!fixes.size){ const SW={'0':'8','8':'03','3':'8','5':'6','6':'5','1':'7','7':'1'};
+    // first what another reading actually saw; only if that settles nothing, a one-glyph swap
+    for(const swaps of [false,true]){ if(fixes.size)break;
+      for(const base of [...out,m0]) for(let j=0;j<10;j++){ const cand=new Set(out.map(o=>o[j]).filter(Boolean)); const c=base[j];
+        if(swaps&&c) for(let q=0;q<c.length;q++) for(const r of (SW[c[q]]||'')) cand.add(c.slice(0,q)+r+c.slice(q+1));
+        for(const v of cand){ if(v===base[j])continue; const try_=base.slice(); try_[j]=v; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } } } }
   if(fixes.size===1) return {cells:JSON.parse([...fixes][0]),ok:true};
   const best=out.sort((a,b)=>b.filter(Boolean).length-a.filter(Boolean).length)[0];
   return {cells:best,ok:false};
@@ -941,7 +953,8 @@ function affinityByColor(px){ // the icon sits just left of the champion name; t
 const FACTIONS=['Banner Lords','High Elves','Sacred Order','Barbarians','Ogryn Tribes','Lizardmen','Skinwalkers','Orcs','Demonspawn','Undead Hordes','Dark Elves','Knights Revenant','Dwarves','Shadowkin','Sylvan Watchers','Argonites'];
 function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
-function snapFaction(t){if(!t)return '';let best=['',99];FACTIONS.forEach(f=>{const v=lev(t,f);if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
+function snapFaction(t){if(!t)return '';let best=['',99];const L=x=>x.toLowerCase().replace(/[^a-z]/g,'');FACTIONS.forEach(f=>{const v=lev(L(t),L(f));   // spaces and stray marks don't count ("Ba nner'Lo nd Ss")
+if(v<best[1])best=[f,v];});return best[1]<=Math.max(3,best[0].length*0.45)?best[0]:t;}
 function avgColor(px,x0,y0,x1,y1){let r=0,g=0,b=0,n=0;for(let x=x0;x<x1;x+=2)for(let y=y0;y<y1;y+=2){const p=px(x,y),mx=Math.max(...p),mn=Math.min(...p);if(mx<150||mx-mn<90)continue;r+=p[0];g+=p[1];b+=p[2];n++;}return n?[r/n,g/n,b/n]:[0,0,0];}
 async function readChampDetails(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
@@ -1287,6 +1300,8 @@ function splitGlyph(raw,stat){
   return {v:raw,g:'',sure:false};
 }
 function parse(text){
+  // only "C." ever stands before DMG / RATE: whatever the reader made of that C ("¢.", "Cc.", "©.") is a C
+  text=text.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1');
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
   const it={set:'',name:'',main:null,asc:null,subs:[]};
   // special accessories carry their own name in the title ("Revenge Amulet"); standard ones just say "Amulet"
@@ -1364,18 +1379,28 @@ function applyHero(el,txt,stars){
     mis.textContent=`⚠ This screenshot is from ${name}, not ${hero.name}.`; mis.style.display='block';
   }
 }
+// generous upper limit of a substat's base value (start + 4 upgrades, rolls rounded up): anything above is a misread
+const SUBMAX={'ATK%':30,'HP%':30,'DEF%':30,'SPD':30,'C.RATE':30,'C. RATE':30,'C.DMG':35,'C. DMG':35,'ACC':60,'RES':60,'ATK':125,'DEF':125,'HP':1500};
+function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if(isNaN(n))return false;
+  const k=(stat||'').toUpperCase(), key=['ATK','HP','DEF'].includes(k)&&pct?k+'%':k; const mx=SUBMAX[key]; return mx===undefined||n<=(glyph?mx/2:mx); }
 // third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
 async function rowCheck(img,it){
   // used only as a referee: alone it is often wrong, so it never overrides two agreeing readings
   await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789+%'});
   try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
+    // a value or glyph no item can carry is a misread, even when the readings agree on it
+    if(sub.v&&!subPossible(sub.s,sub.v)){ sub.sure=false; continue; }
+    if(sub.g&&!subPossible(sub.s,sub.g,true)){ sub.sure=false; continue; }
     const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
     if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
     const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
     const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
     if(row===cur)continue;
     if(dig!==null&&dig===row){ sub.v=row; sub.g=sub.ng||sub.g; sub.sure=true; continue; }   // outvoted 2:1
-    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur)))continue;             // a dropped digit is not a conflict
+    // one reading has an extra digit ("77%" / "7%", "114" / "11"): a value no substat can reach is the wrong one;
+    // if both are possible, nobody can tell — ask to check
+    if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur))){ const okC=subPossible(sub.s,cur), okR=subPossible(sub.s,row);
+      if(okC&&!okR)continue; if(okR&&!okC){ sub.v=row; continue; } }
     sub.sure=false;                                                                       // no majority → ask to check
   } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
 }
