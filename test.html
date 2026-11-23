@@ -530,6 +530,7 @@ async function handleBulk(files){
     const tag=document.createElement('span'); tag.textContent=`… ${f.name}: queued`; log.appendChild(tag);
     queue.push({unknown:true,img,tag,name:f.name,batch});
   }
+  for(const j of queue){ if(j.batch===batch) j.img=await trimBars(j.img); }
   const ks=[]; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(r&&r.k)ks.push(r.k); }
   ks.sort((a,b)=>a-b); const K=ks.length?ks[ks.length>>1]:1; batch.stretch=K;
   if(Math.abs(K-1)>0.015) for(const j of queue){ if(j.batch===batch){ j.img=await unstretch(j.img,K); } }
@@ -620,6 +621,17 @@ function popupRect(img){
   // the frame is 498 x 535 px on an undistorted screen: a different width/height means the picture is stretched sideways
   const k=xR>0?((xR-xL)/(bot-top))/(498/535):null;
   return {s:sc,T:top,L:xL-POP_X*sc,W,H,k};
+}
+// black bars (the game kept its 16:9 shape inside a screen of another shape): cut them off, so only the game is read
+async function trimBars(img){
+  const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);const d=g.getImageData(0,0,W,H).data;
+  const dark=(x,y)=>{const k=(y*W+x)*4;return d[k]<10&&d[k+1]<10&&d[k+2]<10;};
+  const rowDark=y=>{for(let x=0;x<W;x+=3)if(!dark(x,y))return false;return true;}, colDark=x=>{for(let y=0;y<H;y+=3)if(!dark(x,y))return false;return true;};
+  let t=0,b=H-1,l=0,r=W-1; while(t<H/4&&rowDark(t))t++; while(b>H*3/4&&rowDark(b))b--; while(l<W/4&&colDark(l))l++; while(r>W*3/4&&colDark(r))r--;
+  if(t<4&&H-1-b<4&&l<4&&W-1-r<4)return img;                                   // no bars
+  const o=document.createElement('canvas');o.width=r-l+1;o.height=b-t+1;o.getContext('2d').drawImage(img,l,t,o.width,o.height,0,0,o.width,o.height);
+  const bl=await new Promise(z=>o.toBlob(z,'image/png')); return loadImg(bl);
 }
 // a screen of another shape (16:10, 4:3, 21:9 ...) with the game filling it stretches the picture sideways:
 // measure the stretch on the item frames of the batch and squeeze every screenshot back to the normal shape
