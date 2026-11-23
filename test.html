@@ -1176,7 +1176,21 @@ function badge(el,cls,txt){const b=el.querySelector('.badge');b.className='badge
 function handle(el,f){
   const img=new Image(); img.onload=()=>{queue.push({el,img});badge(el,'busy','queued');pump();}; img.src=URL.createObjectURL(f);
 }
+// an item screenshot whose slot could not be seen: once the rest of its batch is done, if exactly one item slot is
+// still free and exactly one item screenshot is left without a slot, that is where it belongs
+const PENDING=[];
+function resolvePending(){
+  for(let i=PENDING.length-1;i>=0;i--){ const job=PENDING[i], b=job.batch;
+    if(queue.some(q=>q.batch===b&&q.unknown))continue;                     // the batch is still being sorted
+    const mine=PENDING.filter(j=>j.batch===b), free=SLOTS.filter(x=>!b.used[x]);
+    if(mine.length===1&&free.length===1){ const hl=free[0], el2=document.querySelector(`.slot[data-slot="${hl}"]`); b.used[hl]=1;
+      if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:job.img,prepped:true,normalized:true}); badge(el2,'busy','queued');
+      if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (the only item slot left)`;} }
+    else if(job.tag){ job.tag.className='no'; job.tag.innerHTML=`✗ ${esc(job.name)}: item screenshot, but its slot could not be told — drop it on the right slot`; }
+    PENDING.splice(i,1); }
+}
 async function pump(){
+  resolvePending();
   if(busy||!worker||!queue.length)return; busy=true;
   const job=queue.shift();
   if(!job.prepped&&!job.normalized){ try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
@@ -1190,7 +1204,8 @@ async function pump(){
             if(job.batch&&job.batch.used[hl]){ if(job.tag){job.tag.className='no';job.tag.textContent=`✗ ${job.name}: second ${hl} — skipped`;} }
             else { if(job.batch)job.batch.used[hl]=1; if(el2.classList.contains('filled'))clearSlot(el2);
               queue.unshift({el:el2,img,prepped:true,normalized:true}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl}`;} }
-            busy=false; pump(); return; } }
+            busy=false; pump(); return; }
+          if(job.kindGuess==='item'&&job.batch){ PENDING.push(job); if(job.tag)job.tag.textContent=`… ${job.name}: item, slot to be worked out`; busy=false; pump(); return; } }
         setStatus('Reading screenshot…'); const kind=await screenKind(img);
         if(job.kindWant){ const p={relic:'r',skills:'b',masteries:'m'}[job.kindWant];
           if(kind===job.kindWant){ if(p==='r')await processRelic(img); else if(p==='b')await processBlessing(img); else processMasteries(img); }
