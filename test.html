@@ -343,7 +343,7 @@ $('simRun').onclick=async()=>{
     const fname=`${set}_${BROWSER}_${batch}_${String(i+1).padStart(2,'0')}_${r}_${m}_${f}.json`; const where=await writeLog(fname,JSON.stringify(rec,null,1));
     if(cardPng){ await writeBlob(fname.replace(/\.json$/,'_card.png'),cardPng.blob);
       // a difference in an item that the reader itself marked "to check" is caught, not silent: amber, not red
-      const silent=diffs.filter(d=>{ const m=d.match(/^slots\.(\w+)/); return !(m&&snap.slots[m[1]]&&snap.slots[m[1]].flagged.length); });
+      const silent=diffs.filter(d=>{ const m=d.match(/^slots\.(\w+)/); const fl=o=>o&&o.slots[m[1]]&&o.slots[m[1]].flagged.length; return !(m&&(fl(snap)||fl(baseline.ref))); });   // marked as doubtful here or in the original: not silent
       const cls2=fails.length||silent.length?'bad':(flagged.length||diffs.length?'warn':'ok');
       $('simGal').insertAdjacentHTML('beforeend',`<figure class="${cls2}"><a href="${cardPng.url}" target="_blank"><img src="${cardPng.url}"></a><figcaption><b>${r==='orig'?'Original':r.replace('x','×')+' ('+RATIO(r)+') · '+m+' · '+f}</b><span class="${fails.length?'bad':'ok'}">recognised ${rec.recognised}</span><span class="${flagged.length?'warn':'ok'}">to check: ${flagged.join(', ')||'none'}</span><span class="${cls2}">${r==='orig'?'reference':(diffs.length?'differences: '+diffs.length+' — '+diffs.slice(0,3).map(d=>d.split(':')[0]).join(', ')+(diffs.length>3?' …':''):'same as original')}</span></figcaption></figure>`); }
     summary.runs.push({screen:r,mode:m,format:f,recognised:rec.recognised,failed:fails.length,flagged:flagged.length,differences:diffs.length,log:fname});
@@ -1389,8 +1389,17 @@ async function rowCheck(img,it){
   await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789+%'});
   try{ for(let i=0;i<it.subs.length&&i<4;i++){ const sub=it.subs[i]; if(!sub.s)continue;
     // a value or glyph no item can carry is a misread, even when the readings agree on it
-    if(sub.v&&!subPossible(sub.s,sub.v)){ sub.sure=false; continue; }
-    if(sub.g&&!subPossible(sub.s,sub.g,true)){ sub.sure=false; continue; }
+    // a value or glyph no item can carry is a misread, even when readings agree on it: take what another reading saw,
+    // if exactly one possible value was seen; otherwise ask to check
+    { const impV=sub.v&&!subPossible(sub.s,sub.v), impG=sub.g&&!subPossible(sub.s,sub.g,true);
+      if(impV||impG){
+        const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+        const r=t?splitGlyph(t,sub.s):null, seen=[{v:sub.nv,g:sub.ng},r||{}];
+        const pick=(key,glyph)=>{ const u=[...new Set(seen.map(c=>c[key]).filter(x=>x&&/^\d+%?$/.test(x)&&subPossible(sub.s,x,glyph)))]; return u.length===1?u[0]:null; };
+        let ok=true;
+        if(impV){ const v=pick('v',false); if(v)sub.v=v; else ok=false; }
+        if(impG){ const g=pick('g',true); if(g)sub.g=g; else ok=false; }
+        sub.sure=ok?undefined:false; if(!ok)continue; } }
     const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
     if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
     const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
