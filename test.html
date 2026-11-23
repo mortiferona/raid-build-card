@@ -1400,13 +1400,17 @@ function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if
 // shown as "to check" instead of passing silently ("ATK 80" read as "ATK 8")
 async function mainCheck(img,it){
   if(!it.main)return;
+  const norm=t=>t.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1').replace(/(\d)[Oo]/g,'$10').replace(/(\d)[Oo]/g,'$10');   // "ATK8O" is ATK 80
+  const read=async mode=>{ const t=norm((await worker.recognize(crop(img,140,120,380,34,3,mode))).data.text);
+    return [...t.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))].map(p=>p[2]); };
   await worker.setParameters({tessedit_pageseg_mode:'7'});
-  try{ const t=(await worker.recognize(crop(img,140,120,380,34,3,'inv'))).data.text.replace(/(?:¢|©|€|Cc|cc|cC|c|C|\()?\s*[.,]?\s*(DMG|RATE)\b/g,'C. $1');
-    const t2=t.replace(/(\d)[Oo]/g,'$10').replace(/(\d)[Oo]/g,'$10');                          // "ATK8O" is ATK 80
-    const pairs=[...t2.matchAll(new RegExp(STAT_RE+'\\s*(\\d[\\d,]*%?)','gi'))];
-    if(!pairs.length)return;
-    if(pairs[0]&&pairs[0][2]!==it.main.v)it.main.sure=false;
-    if(it.asc&&pairs[1]&&pairs[1][2]!==it.asc.v)it.asc.sure=false;
+  try{ const r1=await read('inv'); if(!r1.length)return; let r2=null;
+    // settle each value by majority of three readings: the item text, and two readings of the main line alone
+    for(const [i,f] of [[0,it.main],[1,it.asc]]){ if(!f||!r1[i]||r1[i]===f.v)continue;
+      if(!r2)r2=await read('bw');
+      if(r2[i]===f.v)continue;                         // 2 : 1 for the first reading
+      if(r2[i]===r1[i]){ f.v=r1[i]; continue; }        // 2 : 1 against it
+      f.sure=false; }                                  // three different answers: ask to check
   } finally { await worker.setParameters({tessedit_pageseg_mode:'6'}); }
 }
 // third, independent reading: each substat value row on its own; settle by majority, never pass a disagreement as "read ✓"
