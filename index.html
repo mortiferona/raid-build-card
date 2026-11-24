@@ -911,16 +911,21 @@ function fixEffects(t){
 /* the Blessing picture is a six-sided frame whose size and place shift a little with the screen: take the box of
    its bright coloured border (rows and columns where the border runs) plus a small margin, so the frame is never cut */
 function blessBox(img,bx){
-  // below the "Blessing" heading
-  const X=Math.round(bx-115),Y=793,W=230,H=215, c=document.createElement('canvas'); c.width=W; c.height=H;
+  // the window starts below the "Blessing" heading and is wide and tall enough for any screen; the frame's left and
+  // right sides are the outermost columns with a long coloured run. Its height follows from its width (the frame is
+  // as tall as it is wide, 0.975), and its middle is the middle of where those two sides run — heading text above
+  // and the name and stars below can't pull the box then
+  const X=Math.round(bx-115),Y=760,W=230,H=290, c=document.createElement('canvas'); c.width=W; c.height=H;
   const g=c.getContext('2d'); g.drawImage(...src(img,X,Y,W,H),0,0,W,H); const d=g.getImageData(0,0,W,H).data;
   const on=(i,j)=>{const k=(j*W+i)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>110&&(mx-mn)/mx>0.4;};
-  const rows=new Array(H).fill(0),cols=new Array(W).fill(0); for(let j=0;j<H;j++)for(let i=0;i<W;i++)if(on(i,j)){rows[j]++;cols[i]++;}
-  const R=rows.map((n,j)=>n>=4?j:-1).filter(v=>v>=0), C=cols.map((n,i)=>n>=4?i:-1).filter(v=>v>=0);
-  if(R.length<2||C.length<2)return [Math.round(bx-88),788,175,196];
-  const t=R[0],b=R[R.length-1],l=C[0],r=C[C.length-1];
-  if(b-t<110||b-t>212||r-l<100||r-l>215)return [Math.round(bx-88),788,175,196];
-  return [X+l-5,Y+t-5,r-l+11,b-t+11];
+  const fb=[Math.round(bx-88),788,175,196];
+  const runLen=i=>{let best=0,cur=0;for(let j=0;j<H;j++){ if(on(i,j)){cur++;if(cur>best)best=cur;} else cur=0; } return best;};
+  const cols=[]; for(let i=0;i<W;i++)cols.push(runLen(i));
+  const L=cols.findIndex(n=>n>=50), R=W-1-[...cols].reverse().findIndex(n=>n>=50);
+  if(L<0||R<=L)return fb; const w=R-L+1; if(w<100||w>215)return fb;
+  const ys=[]; for(let j=0;j<H;j++){ let n=0; for(let i=L;i<L+5;i++)n+=on(i,j); for(let i=R-4;i<=R;i++)n+=on(i,j); if(n>=2)ys.push(j); }
+  if(ys.length<30)return fb; const mid=ys[ys.length>>1], h=Math.round(w*1.35);
+  return [X+L-6,Y+mid-h/2-6,w+12,h+12];
 }
 /* relic texts: what a relic does is the same text for every copy of it — so once the relic's name is confirmed, its
    text comes from here instead of the reading (no spelling mistakes possible); the game shows the same text at every
@@ -1216,6 +1221,22 @@ function crossItems(){
     if(sum<col&&fixes.length!==1)continue;              // the rest is set bonuses
     if(fixes.length===1){ const {p,t}=fixes[0]; p.o[p.k]=t; p.o.sure=true; refill(p.sl); continue; }
     for(const p of parts){ p.o.sure=false; refill(p.sl); } }
+  // HP / ATK / DEF: the Artifacts column is the flat values plus Basic Stats × all the % values (plus set bonuses).
+  // When one of these values is marked "to check" and exactly one of the readings seen for it makes the column come
+  // out right (to a point or two of rounding), that reading is proven. With a set bonus in the way nothing fits —
+  // and the mark stays.
+  for(const st of ['HP','ATK','DEF']){ const row=totals.rows[TROWS.indexOf(st)]; if(!row||!row.ok)continue;
+    const base=n(row.cells[0]), col=n(row.cells[1]); if(!base||!col)continue;
+    let flat=0,pct=0,doubt=[],cnt=0; const add=(o,k,sl,sub)=>{ const v=String(o[k]||''); if(!/^\+?\d+%?$/.test(v))return; cnt++;
+      if(/%$/.test(v))pct+=n(v); else flat+=n(v); if(sub&&o.sure===false&&o._alts&&k==='v')doubt.push({o,sl}); };
+    for(const sl of SLOTS){ const it=state[sl];
+      if(it.main&&it.main.s===st)add(it.main,'v',sl); if(it.asc&&it.asc.s===st)add(it.asc,'v',sl);
+      (it.subs||[]).forEach(x=>{ if(x.s===st){ add(x,'v',sl,1); if(x.g)add(x,'g',sl); } }); }
+    if(doubt.length!==1)continue; const {o,sl}=doubt[0], cur=String(o.v), isP=/%$/.test(cur);
+    const tol=Math.max(2,Math.ceil(cnt/2)), calc=(f,p)=>f+base*p/100;
+    const fits=[...new Set(o._alts)].filter(a=>a&&/^\d+%?$/.test(a)&&/%$/.test(a)===isP&&subPossible(st,a)).filter(a=>{
+      const f=isP?flat:flat-n(cur)+n(a), p=isP?pct-n(cur)+n(a):pct; return Math.abs(calc(f,p)-col)<=tol; });
+    if(fits.length===1){ o.v=fits[0]; o.sure=true; refill(sl); } }
 }
 function refill(sl){ const el=document.querySelector(`.slot[data-slot="${sl}"]`); fill(el,state[sl],el.querySelector('.raw').textContent); }
 /* the game's own rule as the last word on Ring / Amulet / Banner: each takes only certain main stats
@@ -1600,7 +1621,7 @@ async function rowCheck(img,it){
       // use similar crops, so a fourth, differently prepared reading decides: with the first → a tie, ask; else accept
       const t4=(await worker.recognize(crop(img,250,rowYs(img)[i]-17,235,34,4,'bw2'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
       const r4=t4?splitGlyph(t4,sub.s):null, v4=r4&&r4.v;
-      if(v4===cur){ sub.sure=false; continue; }
+      if(v4===cur){ sub._alts=[cur,row]; sub.sure=false; continue; }
       sub.v=row; sub.g=sub.ng||sub.g; sub.sure=v4===row?true:false; continue; }
     // one reading has an extra digit ("77%" / "7%", "114" / "11"): a value no substat can reach is the wrong one;
     // if both are possible, nobody can tell — ask to check
@@ -1610,7 +1631,7 @@ async function rowCheck(img,it){
     // kept value ("4" of "54"): nothing actually contradicts the kept value
     { const valid=x=>/^(?:[1-9]\d*|0)%?$/.test(x||'')&&subPossible(sub.s,x);
       if(valid(cur)&&!valid(dig)&&row&&cur.replace('%','').endsWith(row.replace('%',''))&&row.length<cur.length)continue; }
-    sub.sure=false;                                                                       // no majority → ask to check
+    sub._alts=[cur,dig,row]; sub.sure=false;                                              // no majority → ask to check
   } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
 }
 function mergeNums(it,nums){
