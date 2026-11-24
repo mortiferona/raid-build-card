@@ -1140,9 +1140,8 @@ function blessBox(img,bx){
   return [X+l-5,Y+t-5,r-l+11,b-t+11];
 }
 /* relic texts: what a relic does is the same text for every copy of it — so once the relic's name is confirmed, its
-   text comes from here instead of the reading (no spelling mistakes possible). Two safety rules: the reading must be
-   close to the stored text, and its numbers are kept (if a relic's numbers ever differ, the reading's numbers win).
-   A relic not listed here keeps its reading, with the [effect] names repaired. Sources: in-game text read from real
+   text comes from here instead of the reading (no spelling mistakes possible); the game shows the same text at every
+   level, only the bonus stats change, and those are read from the screenshot. A relic not listed here keeps its reading, with the [effect] names repaired. Sources: in-game text read from real
    screenshots; HellHades relic pages for the rest. */
 const RELIC_DESC={
  "Lens of Intangibility":"Wearer ignores 10% of a target's DEF. At the start of a Round, places a [Perfect Veil] buff on the wearer for 2 turns. While under [Veil] or [Perfect Veil], wearer ignores an additional 5% DEF.",
@@ -1169,15 +1168,7 @@ const RELIC_DESC={
  "Journal of Necrotos":"Wearer's heals and Turn Meter increase effects applies to allies are boosted by 15%.",
  "Rod of Blasphemy":"Wearer receives 2% less damage if under any debuffs."
 };
-function relicText(name,read){
-  const ref=RELIC_DESC[name]; if(!ref||!read)return read;
-  const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), nums=x=>(x.match(/\d+(?:\.\d+)?/g)||[]);
-  const a=L(read), b=L(ref); if(!a||lev(a,b)/b.length>0.35)return read;          // not the stored text: keep the reading
-  const nr=nums(read), nf=nums(ref);
-  if(nr.join()===nf.join())return ref;
-  if(nr.length===nf.length){ let i=0; return ref.replace(/\d+(?:\.\d+)?/g,()=>nr[i++]); }   // same text, the reading's numbers
-  return ref;                                                                     // a number lost in the reading: stored one
-}
+function relicText(name,read){ return (RELIC_DESC[name]&&!relic.nameDoubt)?RELIC_DESC[name]:read; }   // the name is confirmed: its text, as the game shows it at any level
 function snapName(t,LIST){ if(!t)return null; const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), a=L(t); if(a.length<3)return null;
   // a long name can wrap onto a second line that the reading misses ("Intimidating" of "Intimidating Presence"):
   // a clear start of exactly one name is enough
