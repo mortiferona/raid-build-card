@@ -152,6 +152,9 @@ input[type=file]{display:none}
 .card .brow .bs{font-size:22px;letter-spacing:3px;margin-top:2px}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .pick{margin:10px 0;padding:8px;border:2px solid #e0452f;border-radius:10px;background:#2a0f0f}.pick .pk-h{color:#ffb3aa;font-weight:700;font-size:13px;margin-bottom:6px}.pick .pk-l{display:flex;flex-wrap:wrap;gap:6px}.pick img{width:48%;min-width:140px;border:2px solid #5a2420;border-radius:6px;cursor:pointer}.pick img:hover{border-color:#ffcf4a}.conflict{border-color:#e0452f!important;box-shadow:0 0 0 2px #e0452f55}#btnPreview.locked{background:#5a2420;color:#ffb3aa;cursor:not-allowed}
+#champpick,#zoompick{position:fixed;inset:0;z-index:110;background:#000d;display:flex;align-items:center;justify-content:center;padding:20px}.cp-box,.zp-box{background:#141a28;border:3px solid #d4a017;border-radius:16px;padding:24px 28px;max-width:1200px;width:100%;text-align:center;color:#efe3c2;font:16px system-ui,Segoe UI,sans-serif}.cp-t{font-size:28px;font-weight:800;color:#ffcf4a}.cp-t b{color:#fff}.cp-s{margin:6px 0 18px;font-size:17px;opacity:.85}.cp-l{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}.cp-c{width:260px;border:3px solid #3a4660;border-radius:14px;padding:10px;cursor:pointer;background:#0b0f18}.cp-c:hover{border-color:#8a7a4a}.cp-c.on{border-color:#ffcf4a;box-shadow:0 0 24px #ffcf4a66}.cp-c img{width:100%;border-radius:8px;display:block}.cp-n{font:700 20px Cardo,serif;margin-top:8px;color:#fff}.cp-k{font-size:14px;opacity:.75}.cp-ok,.zp-ok{margin-top:20px;font:700 18px system-ui;padding:12px 30px;border-radius:10px;border:0;background:#3fa34d;color:#fff;cursor:pointer}.cp-ok:disabled{background:#3a4660;color:#9aa3b2;cursor:default}.zp-top{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:700;color:#ffcf4a;margin-bottom:12px}.zp-x{background:none;border:0;color:#ffb3aa;font-size:26px;cursor:pointer}.zp-mid{display:flex;align-items:center;gap:12px}.zp-mid img{flex:1;min-width:0;max-height:70vh;object-fit:contain;border-radius:10px;border:2px solid #3a4660}.zp-a{font-size:34px;background:#2a3448;color:#ffcf4a;border:0;border-radius:10px;width:56px;height:90px;cursor:pointer}.zp-f{margin-top:8px;font-size:13px;opacity:.6}
+.bulk-rule{display:inline-block;margin:6px 0 2px;padding:3px 12px;border-radius:999px;background:#d4a01733;color:#ffe3a0;font-weight:700;font-size:15px}
+#nag{position:fixed;inset:0;z-index:100;background:#000c;display:flex;align-items:center;justify-content:center;padding:20px}#nag .bignote{max-width:760px;font-size:22px;padding:30px 34px;animation:nagshake .5s 2;box-shadow:0 0 60px #e0452f88}#nag .bignote b{font-size:30px}#nag button{margin-top:18px;font:700 18px system-ui;padding:10px 28px;border-radius:10px;border:0;background:#e0452f;color:#fff;cursor:pointer}@keyframes nagshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-14px)}40%,80%{transform:translateX(14px)}}
 .bignote{margin:14px 0;padding:18px 22px;border:3px solid #e0452f;border-radius:14px;background:#2a0f0f;color:#ffd9d3;font:600 18px/1.45 system-ui,Segoe UI,sans-serif;text-align:center}.bignote b{color:#fff;font-size:22px;display:block;margin-bottom:6px}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
@@ -390,7 +393,7 @@ $('simRun').onclick=async()=>{
     <div><div class="lbl">Awakening · blessing level</div><div class="stars" id="hStars"></div></div>
     <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
   </div>
-  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats, Masteries, Relic and Skills</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><span class="bulk-rule">One champion at a time · 13 screenshots · <u>max 20</u></span><br><small>9 items, Total Stats, Masteries, Relic and Skills — tip: select them in the file window with Ctrl+A</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
   <div class="bignote" id="bignote" style="display:none"></div>
   <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
@@ -576,6 +579,11 @@ async function identifySlot(img,orig){
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
 function bigNote(title,text){ const n=document.getElementById('bignote'); if(!title){ n.style.display='none'; n.innerHTML=''; return; }
   n.innerHTML=`<b>${title}</b>${text}`; n.style.display='block'; n.scrollIntoView({behavior:'smooth',block:'center'}); }
+function nag(title,text){ const old=document.getElementById('nag'); if(old)old.remove();
+  const o=document.createElement('div'); o.id='nag'; o.innerHTML=`<div class="bignote"><b>${title}</b>${text}<br><button>OK, one champion at a time</button></div>`;
+  const close=()=>o.remove(); o.querySelector('button').addEventListener('click',close); o.addEventListener('click',e=>{if(e.target===o)close();});
+  document.addEventListener('keydown',function k(e){ if(e.key==='Escape'){close();document.removeEventListener('keydown',k);} });
+  document.body.appendChild(o); o.querySelector('button').focus(); }
 const MAXFILES=20;   // one champion is 13 screenshots; a folder of several champions is stopped at the door
 async function handleBulk(files){
   files=[...files];
@@ -583,7 +591,8 @@ async function handleBulk(files){
     const t=document.createElement('span'); t.className='no';
     t.textContent=`✗ ${files.length} screenshots at once — that's more than one champion. Add up to ${MAXFILES} (one champion is 13).`;
     log.appendChild(t); setStatus(`Too many screenshots (${files.length}) — add one champion at a time.`);
-    bigNote(`⛔ ${files.length} screenshots — that's more than one champion`,`Nothing was loaded. Add the screenshots of <u>one champion at a time</u> — 13 screenshots, at most ${MAXFILES}.`); return; }
+    { const T=`⛔ ${files.length} screenshots — that's more than one champion`, X=`Nothing was loaded. Add the screenshots of <u>one champion at a time</u> — 13 screenshots, at most ${MAXFILES}.`;
+      bigNote(T,X); nag(T,X); } return; }
   bigNote(null);
   // a whole new set of screenshots (5 or more at once) is a new build: start clean, so nothing of the previous champion stays
   if(files.length>=5&&(hero.name||document.querySelector('.slot.filled')))resetAll();
@@ -601,8 +610,56 @@ async function handleBulk(files){
   const groups={}; for(const j of queue){ if(j.batch!==batch)continue; const r=popupRect(j.img); if(!r)continue; const k=r.W+'x'+r.H; (groups[k]=groups[k]||[]).push(r); }
   for(const k in groups){ const g=groups[k]; if(g.length<2)continue; const med=f=>{const v=g.map(r=>r[f]).sort((a,b)=>a-b);return v[v.length>>1];};
     POPS[k]={s:med('s'),T:med('T'),L:med('L'),W:g[0].W,H:g[0].H,batch:true}; }
+  // first check, before anything is read: whose screenshots are these? Several champions → the person picks one
+  if(worker) await whoseSet(batch);
   pump();
 }
+/* every screenshot of a champion screen carries the champion's name at the top. Read it from each one, group the
+   names (a misread letter is still the same champion), and if more than one champion turns up, show them big —
+   face, name, how many screenshots — and let the person pick. The other champions' screenshots are set aside;
+   the ones without a readable name stay */
+async function whoseSet(batch){
+  const jobs=queue.filter(j=>j.batch===batch); if(jobs.length<2)return;
+  const wasBusy=busy; busy=true; setStatus('Checking whose screenshots these are…');
+  try{
+    for(const j of jobs){
+      if(!j.prepped&&!j.normalized){ j.orig=j.img; try{const r=await autoNormalize(j.img); j.img=r.img; j.normalized=!!r.fit; j.kindGuess=r.kind;}catch(e){} j.prepped=true; }
+      const {head}=prep(j.img); await worker.setParameters({tessedit_pageseg_mode:'7'});
+      const t=(await worker.recognize(head)).data.text.replace(/^.*?\d[\d,]*\s*\/\s*\d[\d,]*\s*/,'');
+      const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); j.who=m?m[1].trim():''; }
+    await worker.setParameters({tessedit_pageseg_mode:'6'});
+  }finally{ busy=wasBusy; }
+  const groups=[]; for(const j of jobs){ if(!j.who)continue; const a=j.who.toLowerCase();
+    let g=groups.find(g=>lev(a,g.key)<=Math.max(2,Math.round(g.key.length*0.3))); if(!g){ g={key:a,names:{},jobs:[]}; groups.push(g); }
+    g.jobs.push(j); g.names[j.who]=(g.names[j.who]||0)+1; }
+  // the face: the champion stands in the middle of the Relic / Skills / Masteries screens; item screens show the
+  // artifact storage there instead, so they give only the name line
+  groups.forEach(g=>{ g.name=Object.entries(g.names).sort((a,b)=>b[1]-a[1])[0][0];
+    const f=g.jobs.find(j=>j.kindGuess==='relic'||j.kindGuess==='skills');
+    g.face=f?cropURL(f.img,690,90,470,600,'image/jpeg'):cropURL(g.jobs[0].img,560,10,770,60,'image/jpeg'); });
+  const real=groups.filter(g=>g.jobs.length>=2);                       // one stray reading is not a second champion
+  if(real.length<2)return;
+  // 13 places: a champion with 7 or more of the screenshots holds the majority — that is clearly the one; otherwise ask
+  // (7 of 13 and more than any other champion); a tie like 10 and 10 is the person's call
+  const rk=[...real].sort((a,b)=>b.jobs.length-a.jobs.length), maj=rk[0].jobs.length>=7&&rk[0].jobs.length>rk[1].jobs.length?rk[0]:null;
+  const pick=maj||await chooseChampion(real);
+  const keep=new Set(pick.jobs); let out=0;
+  for(const g of groups) if(g!==pick) for(const j of g.jobs){ const i=queue.indexOf(j); if(i>=0){ queue.splice(i,1); out++; if(j.tag){ j.tag.className='no'; j.tag.textContent=`✗ ${j.name}: ${g.name} — set aside`; } } }
+  const log=document.getElementById('blog'); const t=document.createElement('span'); t.className='ok'; t.textContent=`✓ Building the card for ${pick.name} — ${out} screenshot${out===1?'':'s'} of other champions set aside`; log.prepend(t);
+  const others=groups.filter(g=>g!==pick).map(g=>`${esc(g.name)} (${g.jobs.length})`).join(', ');
+  bigNote(`⚠ Screenshots of ${groups.length} champions were added`,`Building the card for <span style="color:#ffcf4a">${esc(pick.name)}</span>${maj?` — most of the screenshots are his`:''}. Set aside: ${others}.`);
+}
+function chooseChampion(groups){ return new Promise(res=>{
+  const o=document.createElement('div'); o.id='champpick'; let sel=null;
+  o.innerHTML=`<div class="cp-box"><div class="cp-t">Your screenshots show <b>${groups.length} different champions</b></div>
+    <div class="cp-s">Pick the one you want the card for — the screenshots of the others are set aside.</div>
+    <div class="cp-l">${groups.map((g,i)=>`<div class="cp-c" data-i="${i}"><img src="${g.face}"><div class="cp-n">${esc(g.name)}</div><div class="cp-k">${g.jobs.length} screenshot${g.jobs.length>1?'s':''}</div></div>`).join('')}</div>
+    <button class="cp-ok" disabled>Pick a champion</button></div>`;
+  const ok=o.querySelector('.cp-ok');
+  o.querySelectorAll('.cp-c').forEach(c=>c.addEventListener('click',()=>{ o.querySelectorAll('.cp-c').forEach(x=>x.classList.remove('on')); c.classList.add('on'); sel=groups[+c.dataset.i]; ok.disabled=false; ok.textContent=`Build the card for ${sel.name}`; }));
+  ok.addEventListener('click',()=>{ if(!sel)return; o.remove(); res(sel); });
+  document.body.appendChild(o); }); }
+
 (()=>{const z=document.getElementById('bulk'),fi=document.getElementById('bulkFile');
   z.addEventListener('click',()=>fi.click());
   fi.addEventListener('change',()=>{if(fi.files.length)handleBulk([...fi.files]);fi.value='';});
@@ -1505,9 +1562,23 @@ function pickHost(key){ return SLOTS.includes(key)?document.querySelector(`.slot
 function showPicker(key){ const host=pickHost(key), list=CONFLICTS[key]; if(!host||!list)return;
   let box=host.querySelector('.pick'); if(!box){ box=document.createElement('div'); box.className='pick'; host.insertBefore(box,host.children[2]||null); }
   box.innerHTML=`<div class="pk-h">⚠ ${list.length} screenshots for this place — click the right one</div><div class="pk-l">${list.map((c,i)=>`<img data-i="${i}" src="${pickThumb(key,c.img)}" title="${esc(c.name||'')}">`).join('')}</div>`;
-  box.querySelectorAll('img').forEach(im=>im.addEventListener('click',ev=>{ ev.stopPropagation(); choose(key,+im.dataset.i); }));
+  box.querySelectorAll('img').forEach(im=>im.addEventListener('click',ev=>{ ev.stopPropagation(); zoomPick(key,+im.dataset.i); }));
   if(SLOTS.includes(key))badge(host,'bad','pick one'); else setBadgeId(key+'Badge','bad','pick one');
   host.classList.add('conflict'); }
+/* a candidate opens big first: look at it, step to the others with the arrows (or ← →), and only "This is the one"
+   decides — a click on a small picture never picks by itself */
+function zoomPick(key,start){ const list=CONFLICTS[key]; if(!list)return; let i=start;
+  const o=document.createElement('div'); o.id='zoompick';
+  const big=c=>{ const area=SLOTS.includes(key)?[25,0,475,295]:PICK_AREA[key], W=1100, k=W/area[2], H=Math.round(area[3]*k), cv=document.createElement('canvas'); cv.width=W; cv.height=H+70;
+    const g=cv.getContext('2d'); g.fillStyle='#0b0f18'; g.fillRect(0,0,W,H+70); g.drawImage(...src(c.img,560,10,770,60),0,0,W,62); g.drawImage(...src(c.img,...area),0,70,W,H); return cv.toDataURL('image/jpeg',0.92); };
+  const draw=()=>{ o.innerHTML=`<div class="zp-box"><div class="zp-top"><span>${SLOTS.includes(key)?key:{t:'Total Stats',r:'Relic',b:'Blessing',m:'Masteries'}[key]} — option ${i+1} of ${list.length}</span><button class="zp-x" title="Close">✕</button></div>
+      <div class="zp-mid"><button class="zp-a" data-d="-1">◀</button><img src="${big(list[i])}"><button class="zp-a" data-d="1">▶</button></div>
+      <div class="zp-f">${esc(list[i].name||'')}</div><button class="zp-ok">This is the one</button></div>`;
+    o.querySelector('.zp-x').onclick=close; o.querySelectorAll('.zp-a').forEach(b=>b.onclick=()=>{ i=(i+(+b.dataset.d)+list.length)%list.length; draw(); });
+    o.querySelector('.zp-ok').onclick=()=>{ close(); choose(key,i); }; };
+  const key_=e=>{ if(e.key==='ArrowLeft'){i=(i-1+list.length)%list.length;draw();} else if(e.key==='ArrowRight'){i=(i+1)%list.length;draw();} else if(e.key==='Escape')close(); };
+  function close(){ o.remove(); document.removeEventListener('keydown',key_); }
+  document.addEventListener('keydown',key_); draw(); document.body.appendChild(o); }
 function choose(key,i){ const c=CONFLICTS[key][i]; delete CONFLICTS[key]; const host=pickHost(key);
   const box=host.querySelector('.pick'); if(box)box.remove(); host.classList.remove('conflict');
   if(SLOTS.includes(key)){ clearSlot(host); queue.unshift({el:host,img:c.img,orig:c.orig,prepped:true,normalized:true,forced:true}); badge(host,'busy','queued'); }
