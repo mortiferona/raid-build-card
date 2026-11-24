@@ -152,6 +152,7 @@ input[type=file]{display:none}
 .card .brow .bs{font-size:22px;letter-spacing:3px;margin-top:2px}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
 .pick{margin:10px 0;padding:8px;border:2px solid #e0452f;border-radius:10px;background:#2a0f0f}.pick .pk-h{color:#ffb3aa;font-weight:700;font-size:13px;margin-bottom:6px}.pick .pk-l{display:flex;flex-wrap:wrap;gap:6px}.pick img{width:48%;min-width:140px;border:2px solid #5a2420;border-radius:6px;cursor:pointer}.pick img:hover{border-color:#ffcf4a}.conflict{border-color:#e0452f!important;box-shadow:0 0 0 2px #e0452f55}#btnPreview.locked{background:#5a2420;color:#ffb3aa;cursor:not-allowed}
+.bignote{margin:14px 0;padding:18px 22px;border:3px solid #e0452f;border-radius:14px;background:#2a0f0f;color:#ffd9d3;font:600 18px/1.45 system-ui,Segoe UI,sans-serif;text-align:center}.bignote b{color:#fff;font-size:22px;display:block;margin-bottom:6px}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
 </head>
@@ -390,6 +391,7 @@ $('simRun').onclick=async()=>{
     <div class="note" id="hNote">Filled in automatically from the first screenshot. Click a star to correct.</div>
   </div>
   <div class="bulk" id="bulk"><b>Drop all your screenshots here</b><br>or click to select several at once — each one goes to its slot automatically<br><small>tip: select all your screenshots in the file window with Ctrl+A — items, Total Stats, Masteries, Relic and Skills</small><input type="file" id="bulkFile" accept="image/*" multiple></div>
+  <div class="bignote" id="bignote" style="display:none"></div>
   <div class="blog" id="blog"></div>
   <div class="status" id="status">Loading text reader…</div>
   <div class="grid" id="grid"></div>
@@ -514,7 +516,7 @@ function clearSlot(el){
 }
 function resetAll(){
   clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
-  queue.length=0; HVOTES.length=0; PENDING.length=0; for(const k in CONFLICTS){ delete CONFLICTS[k]; } document.querySelectorAll('.pick').forEach(p=>p.remove()); document.querySelectorAll('.conflict').forEach(e=>e.classList.remove('conflict')); lockPreview();
+  queue.length=0; HVOTES.length=0; PENDING.length=0; for(const k in CONFLICTS){ delete CONFLICTS[k]; } bigNote(null); delete document.getElementById('bignote').dataset.shown; document.querySelectorAll('.pick').forEach(p=>p.remove()); document.querySelectorAll('.conflict').forEach(e=>e.classList.remove('conflict')); lockPreview();
   for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k];             // nothing of the old screenshots may linger
   const bl=document.getElementById('blog'); if(bl)bl.innerHTML='';
   for(const k in state)delete state[k];
@@ -572,13 +574,17 @@ async function identifySlot(img,orig){
   return (o[0][0]>0.1&&o[0][0]>1.5*o[1][0])?SLOTS[6+o[0][1]]:null;
 }
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
+function bigNote(title,text){ const n=document.getElementById('bignote'); if(!title){ n.style.display='none'; n.innerHTML=''; return; }
+  n.innerHTML=`<b>${title}</b>${text}`; n.style.display='block'; n.scrollIntoView({behavior:'smooth',block:'center'}); }
 const MAXFILES=20;   // one champion is 13 screenshots; a folder of several champions is stopped at the door
 async function handleBulk(files){
   files=[...files];
   if(files.length>MAXFILES){ const log=document.getElementById('blog'); log.innerHTML='';
     const t=document.createElement('span'); t.className='no';
     t.textContent=`✗ ${files.length} screenshots at once — that's more than one champion. Add up to ${MAXFILES} (one champion is 13).`;
-    log.appendChild(t); setStatus(`Too many screenshots (${files.length}) — add one champion at a time.`); return; }
+    log.appendChild(t); setStatus(`Too many screenshots (${files.length}) — add one champion at a time.`);
+    bigNote(`⛔ ${files.length} screenshots — that's more than one champion`,`Nothing was loaded. Add the screenshots of <u>one champion at a time</u> — 13 screenshots, at most ${MAXFILES}.`); return; }
+  bigNote(null);
   // a whole new set of screenshots (5 or more at once) is a new build: start clean, so nothing of the previous champion stays
   if(files.length>=5&&(hero.name||document.querySelector('.slot.filled')))resetAll();
   const log=document.getElementById('blog'); log.innerHTML=''; const batch={used:{}};
@@ -1526,7 +1532,10 @@ function resolvePending(){
 async function pump(){
   resolvePending(); if(!busy&&!queue.length){ fixAccessories(); if(!queue.length){ crossItems();
     const st=document.getElementById('status').textContent;          // every way a batch can end lands on a clear status
-    if(!/^(Ready|Loading|Too many)/.test(st)) setStatus(openConflicts().length?'Done — pick the right screenshot in the red places, then preview.':'Done — check the fields.'); } }
+    if(!/^(Ready|Loading|Too many)/.test(st)){ const oc=openConflicts(); setStatus(oc.length?'Done — pick the right screenshot in the red places, then preview.':'Done — check the fields.');
+      if(oc.length&&!document.getElementById('bignote').dataset.shown){ document.getElementById('bignote').dataset.shown=1;
+        bigNote(`⚠ ${oc.length} place${oc.length>1?'s have':' has'} more than one screenshot`,`Scroll down to the places marked in <span style="color:#ff6b5a">red</span> and click the right screenshot in each. The card can be previewed after that.`); }
+      if(!oc.length&&document.getElementById('bignote').dataset.shown){ delete document.getElementById('bignote').dataset.shown; bigNote(null); } } } }
   if(busy||!worker||!queue.length)return; busy=true;
   const job=queue.shift();
   if(!job.prepped&&!job.normalized){ job.orig=job.img; try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
