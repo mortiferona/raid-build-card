@@ -1683,7 +1683,10 @@ function fix17(img,it){
   });
 }
 function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if(isNaN(n))return false;
-  const k=(stat||'').toUpperCase(), key=['ATK','HP','DEF'].includes(k)&&pct?k+'%':k; const mx=SUBMAX[key]; return mx===undefined||n<=(glyph?mx/2:mx); }
+  const k=(stat||'').toUpperCase(), key=['ATK','HP','DEF'].includes(k)&&pct?k+'%':k; const mx=SUBMAX[key];
+  if(['SPD','ACC','RES'].includes(k)&&pct)return false;                 // these never come as a percentage
+  if(/^C\.\s?(RATE|DMG)$/.test(k)&&!pct)return false;                    // these always do
+  return mx===undefined||n<=(glyph?mx/2:mx); }
 // second reading of the main line alone (main stat + ascension bonus): a value the two readings disagree on is
 // shown as "to check" instead of passing silently ("ATK 80" read as "ATK 8")
 async function mainCheck(img,it){
