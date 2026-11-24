@@ -151,6 +151,7 @@ input[type=file]{display:none}
 .card .brow .bn{font-family:Cardo,serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:1px;line-height:1.2}
 .card .brow .bs{font-size:22px;letter-spacing:3px;margin-top:2px}
 .card .foot{margin-top:16px;display:flex;justify-content:space-between;font-size:13px;color:#5d6880}
+.pick{margin:10px 0;padding:8px;border:2px solid #e0452f;border-radius:10px;background:#2a0f0f}.pick .pk-h{color:#ffb3aa;font-weight:700;font-size:13px;margin-bottom:6px}.pick .pk-l{display:flex;flex-wrap:wrap;gap:6px}.pick img{width:48%;min-width:140px;border:2px solid #5a2420;border-radius:6px;cursor:pointer}.pick img:hover{border-color:#ffcf4a}.conflict{border-color:#e0452f!important;box-shadow:0 0 0 2px #e0452f55}#btnPreview.locked{background:#5a2420;color:#ffb3aa;cursor:not-allowed}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 </style>
 </head>
@@ -488,7 +489,7 @@ function emptySlot(el){
 // every screenshot shows the champion's name and stars in its header: take what most of them agree on, not just the first
 const HVOTES=[];
 function voteHero(name,lvl,stars,from,pink,gold){
-  if(name)HVOTES.push({name,lvl,stars,from,sk:`${stars}|${pink||0}|${gold||0}`});
+  if(name){ for(let i=HVOTES.length-1;i>=0;i--)if(HVOTES[i].from===from)HVOTES.splice(i,1); HVOTES.push({name,lvl,stars,from,sk:`${stars}|${pink||0}|${gold||0}`}); }
   const tally=(f)=>{ const c={}; HVOTES.forEach(v=>{ const k=v[f]; if(k)c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; };
   const n=tally('name'), sk=tally('sk'), lv=tally('lvl'); if(!n)return;
   const [r,p,g]=(sk?sk[0]:`${hero.stars}|${hero.pink}|${hero.gold}`).split('|').map(Number);
@@ -513,7 +514,7 @@ function clearSlot(el){
 }
 function resetAll(){
   clearTotals(); clearMasteries(); clearPanel('r',relic); clearPanel('b',bless); Object.keys(champ).forEach(k=>delete champ[k]);
-  queue.length=0; HVOTES.length=0; PENDING.length=0;
+  queue.length=0; HVOTES.length=0; PENDING.length=0; for(const k in CONFLICTS){ delete CONFLICTS[k]; } document.querySelectorAll('.pick').forEach(p=>p.remove()); document.querySelectorAll('.conflict').forEach(e=>e.classList.remove('conflict')); lockPreview();
   for(const k in POPS)delete POPS[k]; for(const k in RANCH)delete RANCH[k];             // nothing of the old screenshots may linger
   const bl=document.getElementById('blog'); if(bl)bl.innerHTML='';
   for(const k in state)delete state[k];
@@ -571,7 +572,13 @@ async function identifySlot(img,orig){
   return (o[0][0]>0.1&&o[0][0]>1.5*o[1][0])?SLOTS[6+o[0][1]]:null;
 }
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
+const MAXFILES=20;   // one champion is 13 screenshots; a folder of several champions is stopped at the door
 async function handleBulk(files){
+  files=[...files];
+  if(files.length>MAXFILES){ const log=document.getElementById('blog'); log.innerHTML='';
+    const t=document.createElement('span'); t.className='no';
+    t.textContent=`✗ ${files.length} screenshots at once — that's more than one champion. Add up to ${MAXFILES} (one champion is 13).`;
+    log.appendChild(t); setStatus(`Too many screenshots (${files.length}) — add one champion at a time.`); return; }
   // a whole new set of screenshots (5 or more at once) is a new build: start clean, so nothing of the previous champion stays
   if(files.length>=5&&(hero.name||document.querySelector('.slot.filled')))resetAll();
   const log=document.getElementById('blog'); log.innerHTML=''; const batch={used:{}};
@@ -1376,7 +1383,7 @@ function buildCard(){
 }
 function fitStage(){const st=document.getElementById('stage'),c=document.getElementById('card');if(!c)return;
   const k=Math.min(1,(window.innerWidth-48)/c.offsetWidth); st.style.transform=`scale(${k})`; st.style.width=c.offsetWidth+'px'; st.style.height=(c.offsetHeight*k)+'px';}
-document.getElementById('btnPreview').addEventListener('click',()=>{
+document.getElementById('btnPreview').addEventListener('click',()=>{ if(openConflicts().length)return;
   document.getElementById('stage').innerHTML=buildCard(); document.getElementById('modal').style.display='block'; fitStage();});
 document.getElementById('btnClose').addEventListener('click',()=>{document.getElementById('modal').style.display='none';});
 window.addEventListener('resize',fitStage);
@@ -1477,6 +1484,34 @@ function fixAccessories(){
   const log=document.getElementById('blog'); if(log){const t=document.createElement('span');t.className='ok';t.textContent='✓ accessories put where their main stat fits';log.appendChild(t);}
   pump();
 }
+/* two or more screenshots for the same place (a folder with several champions in it, or a slot taken twice):
+   nothing is guessed. The place turns red and shows a small piece of each screenshot — the champion's name and
+   the item or panel — and the card can't be previewed until the right one is picked for every such place */
+const CONFLICTS={};
+const PANEL_OF={totals:'t',relic:'r',skills:'b',masteries:'m'}, PANEL_KIND={t:'totals',r:'relic',b:'skills',m:'masteries'};
+const PICK_AREA={t:[20,85,1880,700],r:[1440,280,470,560],b:[1440,735,470,330],m:[0,90,1920,990]};
+function pickThumb(key,img){ const area=ACC_MAIN[key]||SLOTS.includes(key)?[25,0,475,295]:PICK_AREA[key];
+  const W=480, k=W/area[2], H=Math.round(area[3]*k), c=document.createElement('canvas'); c.width=W; c.height=H+46;
+  const g=c.getContext('2d'); g.fillStyle='#0b0f18'; g.fillRect(0,0,W,H+46);
+  g.drawImage(...src(img,560,10,770,60),0,0,W,38); g.drawImage(...src(img,...area),0,46,W,H); return c.toDataURL('image/jpeg',0.85); }
+function addCandidate(key,job){ (CONFLICTS[key]=CONFLICTS[key]||[]).push({img:job.img,orig:job.orig,name:job.name}); if(CONFLICTS[key].length>1)showPicker(key); lockPreview(); }
+function pickHost(key){ return SLOTS.includes(key)?document.querySelector(`.slot[data-slot="${key}"]`):document.getElementById(key+'panel'); }
+function showPicker(key){ const host=pickHost(key), list=CONFLICTS[key]; if(!host||!list)return;
+  let box=host.querySelector('.pick'); if(!box){ box=document.createElement('div'); box.className='pick'; host.insertBefore(box,host.children[2]||null); }
+  box.innerHTML=`<div class="pk-h">⚠ ${list.length} screenshots for this place — click the right one</div><div class="pk-l">${list.map((c,i)=>`<img data-i="${i}" src="${pickThumb(key,c.img)}" title="${esc(c.name||'')}">`).join('')}</div>`;
+  box.querySelectorAll('img').forEach(im=>im.addEventListener('click',ev=>{ ev.stopPropagation(); choose(key,+im.dataset.i); }));
+  if(SLOTS.includes(key))badge(host,'bad','pick one'); else setBadgeId(key+'Badge','bad','pick one');
+  host.classList.add('conflict'); }
+function choose(key,i){ const c=CONFLICTS[key][i]; delete CONFLICTS[key]; const host=pickHost(key);
+  const box=host.querySelector('.pick'); if(box)box.remove(); host.classList.remove('conflict');
+  if(SLOTS.includes(key)){ clearSlot(host); queue.unshift({el:host,img:c.img,orig:c.orig,prepped:true,normalized:true,forced:true}); badge(host,'busy','queued'); }
+  else if(key==='t'){ clearTotals(); queue.unshift({totals:true,img:c.img,prepped:true,normalized:true}); }
+  else { if(key==='m')clearMasteries(); else clearPanel(key,key==='r'?relic:bless); queue.unshift({kindWant:PANEL_KIND[key],img:c.img,prepped:true,normalized:true}); }
+  lockPreview(); pump(); }
+function openConflicts(){ return Object.keys(CONFLICTS).filter(k=>CONFLICTS[k].length>1); }
+function lockPreview(){ const b=document.getElementById('btnPreview'), open=openConflicts(); b.disabled=open.length>0;
+  b.classList.toggle('locked',open.length>0);
+  b.title=open.length?'Pick the right screenshot first for: '+open.map(k=>SLOTS.includes(k)?k:{t:'Total Stats',r:'Relic',b:'Blessing',m:'Masteries'}[k]).join(', '):''; }
 const PENDING=[];
 function resolvePending(){
   for(let i=PENDING.length-1;i>=0;i--){ const job=PENDING[i], b=job.batch;
@@ -1489,19 +1524,21 @@ function resolvePending(){
     PENDING.splice(i,1); }
 }
 async function pump(){
-  resolvePending(); if(!busy&&!queue.length){ fixAccessories(); if(!queue.length)crossItems(); }
+  resolvePending(); if(!busy&&!queue.length){ fixAccessories(); if(!queue.length){ crossItems();
+    const st=document.getElementById('status').textContent;          // every way a batch can end lands on a clear status
+    if(!/^(Ready|Loading|Too many)/.test(st)) setStatus(openConflicts().length?'Done — pick the right screenshot in the red places, then preview.':'Done — check the fields.'); } }
   if(busy||!worker||!queue.length)return; busy=true;
   const job=queue.shift();
   if(!job.prepped&&!job.normalized){ job.orig=job.img; try{const r=await autoNormalize(job.img); job.img=r.img; job.normalized=!!r.fit; job.kindGuess=r.kind;}catch(e){console.error(e);} job.prepped=true; }
   const {el,img}=job;
   if(job.totals||job.kindWant||job.unknown){
     try{
-      if(job.totals){ await processTotals(img); }
+      if(job.totals){ clearTotals(); await processTotals(img); }
       else{
         if(job.unknown){ const hl=(job.kindGuess==='item'||!job.kindGuess)?await identifySlot(img,job.orig):null;
           if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`);
-            if(job.batch&&job.batch.used[hl]){ if(job.tag){job.tag.className='no';job.tag.textContent=`✗ ${job.name}: second ${hl} — skipped`;} }
-            else { if(job.batch)job.batch.used[hl]=1; if(el2.classList.contains('filled'))clearSlot(el2);
+            if(job.batch&&job.batch.used[hl]){ addCandidate(hl,job); if(job.tag){job.tag.className='no';job.tag.textContent=`⚠ ${job.name}: another ${hl} — pick the right one in the ${hl} slot`;} }
+            else { if(job.batch){ job.batch.used[hl]=1; addCandidate(hl,job); } if(el2.classList.contains('filled'))clearSlot(el2);
               queue.unshift({el:el2,img,orig:job.orig,prepped:true,normalized:true}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl}`;} }
             busy=false; pump(); return; }
           if(job.kindGuess==='item'&&job.batch){ PENDING.push(job); if(job.tag)job.tag.textContent=`… ${job.name}: item, slot to be worked out`; busy=false; pump(); return; } }
@@ -1511,10 +1548,10 @@ async function pump(){
           else { let im=img,k2=kind; if(!job.normalized){const img2=await findGame(img); if(img2){im=img2;k2=await screenKind(img2);}}
             if(k2===job.kindWant){ if(p==='r')await processRelic(im); else if(p==='b')await processBlessing(im); else processMasteries(im); }
             else panelWrong(p,PHELP[p],await whatIs(im,k2),im); } }
-        else if(kind==='totals'){ clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} }
-        else if(kind==='masteries'){ clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} }
-        else if(kind==='relic'){ clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} }
-        else if(kind==='skills'){ clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} }
+        else if(kind==='totals'){ const pk=PANEL_OF[kind]; if(job.batch){ addCandidate(pk,job); if(CONFLICTS[pk].length>1){ if(job.tag){job.tag.className='no';job.tag.textContent=`⚠ ${job.name}: another Total Stats — pick the right one in the Total Stats box`;} } else { clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} } } else { clearTotals(); await processTotals(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Total Stats';} } }
+        else if(kind==='masteries'){ const pk=PANEL_OF[kind]; if(job.batch){ addCandidate(pk,job); if(CONFLICTS[pk].length>1){ if(job.tag){job.tag.className='no';job.tag.textContent=`⚠ ${job.name}: another Masteries — pick the right one in the Masteries box`;} } else { clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} } } else { clearMasteries(); processMasteries(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Masteries';} } }
+        else if(kind==='relic'){ const pk=PANEL_OF[kind]; if(job.batch){ addCandidate(pk,job); if(CONFLICTS[pk].length>1){ if(job.tag){job.tag.className='no';job.tag.textContent=`⚠ ${job.name}: another Relic — pick the right one in the Relic box`;} } else { clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} } } else { clearPanel('r',relic); await processRelic(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Relic';} } }
+        else if(kind==='skills'){ const pk=PANEL_OF[kind]; if(job.batch){ addCandidate(pk,job); if(CONFLICTS[pk].length>1){ if(job.tag){job.tag.className='no';job.tag.textContent=`⚠ ${job.name}: another Blessing — pick the right one in the Blessing box`;} } else { clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} } } else { clearPanel('b',bless); await processBlessing(img); if(job.tag){job.tag.className='ok';job.tag.textContent='✓ Blessing';} } }
         else if(!job.normalized){ const img2=await findGame(img);
           if(img2){ const hl=highlightSlot(img2);
             if(hl){ const el2=document.querySelector(`.slot[data-slot="${hl}"]`); if(el2.classList.contains('filled'))clearSlot(el2); queue.unshift({el:el2,img:img2}); badge(el2,'busy','queued'); if(job.tag){job.tag.className='ok';job.tag.textContent=`✓ ${hl} (game found in the picture)`;} }
