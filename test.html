@@ -1000,7 +1000,7 @@ document.addEventListener('focusin',e=>{
     return peekShow(inp,markedCrop(totals.img,20,y-30,1880,60,[20+2,y-26,1876,52])); }
   const el=inp.closest('.slot'); if(!el||!el._img)return peekHide();
   let mark=null; const row=inp.closest('.row.sub');
-  if(row){ const i=[...el.querySelectorAll('.row.sub')].indexOf(row); mark=[30,150+i*31,450,31]; }
+  if(row){ const i=[...el.querySelectorAll('.row.sub')].indexOf(row), ys=rowYs(el._img), k=(ys[i]-ROWY[i]); mark=[30,ys[i]-15,450,31]; }
   else if(/f-mv|f-ms|f-av|f-as/.test(inp.className)) mark=[30,113,450,36];
   else if(/f-set|f-name/.test(inp.className)) mark=[30,0,450,60];
   peekShow(inp,markedCrop(el._img,25,0,475,295,mark));
@@ -1105,6 +1105,39 @@ const SETS=['Life','Offense','Defense','Speed','Critical Rate','Critical Damage'
  'Resilience','Perception','Affinitybreaker','Untouchable','Fatal','Frostbite','Bloodthirst','Guardian','Fortitude','Lethal','Protection','Stone Skin','Killstroke','Instinct','Bolster','Defiant','Impulse',
  'Zeal','Righteous','Supersonic','Merciless','Slayer','Feral','Pinpoint','Stonecleaver','Rebirth','Chronophage','Mercurial','Refresh','Cleansing','Bloodshield','Reaction','Revenge'];
 // returns the known name, or null when nothing is close enough or two names are equally close (then: ask to check)
+/* buff and debuff names in relic and blessing texts come from a closed list: snap what is inside [ ] onto it.
+   A lost bracket that glued two of them together ("[Veil] or [Perfect Veil]" read as "[VeNmor [Perfect Veil]") is
+   matched against "name] or" / "name] and" / "name]," and put back the same way */
+const EFFECTS=['Veil','Perfect Veil','Stun','Sleep','Fear','True Fear','Freeze','Provoke','Petrification','Sheep','Taunt','Shield','Ally Protection',
+ 'Strengthen','Unkillable','Block Damage','Block Debuffs','Block Buffs','Block Active Skills','Block Passive Skills','Block Revive','Revive on Death','Counterattack',
+ 'Continuous Heal','Increase ATK','Increase DEF','Increase SPD','Increase C. RATE','Increase C. DMG','Increase ACC','Increase RES',
+ 'Decrease ATK','Decrease DEF','Decrease SPD','Decrease C. RATE','Decrease C. DMG','Decrease ACC','Decrease RES','Weaken','Leech','Heal Reduction','Poison',
+ 'HP Burn','Bomb','Hex','Poison Sensitivity','Necrosis','Enfeeble','Fatigue','Burn','Reflect Damage','Shatter','Ward','Intercept','Life Barrier','Perfect Shield',
+ 'Stone Skin','Fear','Mark','Retaliation','Invisible','Untouchable','Provoke','Cleanse'];
+function fixEffects(t){
+  const near=(x,cands,q=0.4)=>{ const X=x.replace(/\s+/g,''); const sc=cands.map(c=>{const C=c.replace(/\s+/g,''); return [lev(X,C)/C.length,c];}).sort((a,b)=>a[0]-b[0]);
+    return sc.length&&sc[0][0]<=q&&(sc.length<2||sc[1][0]>sc[0][0]+0.03)?sc[0][1]:null; };
+  // "[xxx]" — the name itself
+  t=t.replace(/\[([^\[\]]{2,30})\]/g,(m,x)=>{ const e=near(x,EFFECTS); return e?'['+e+']':m; });
+  // "[xxx [" — no closing bracket before the next one: a name glued to "] or" / "] and" / "],"
+  t=t.replace(/\[([^\[\]]{2,30}?)\s*(?=\[)/g,(m,x)=>{ const cands=[]; for(const e of EFFECTS)for(const j of ['] or ','] and ','], '])cands.push(e+j.trim());
+    const c=near(x,cands,0.5); if(!c)return m; const e=EFFECTS.find(z=>c.startsWith(z+']')); return '['+e+']'+c.slice(e.length+1).replace(/^(or|and)$/,' $1')+' '; });
+  return t.replace(/\s{2,}/g,' ');
+}
+/* the Blessing picture is a six-sided frame whose size and place shift a little with the screen: take the box of
+   its bright coloured border (rows and columns where the border runs) plus a small margin, so the frame is never cut */
+function blessBox(img,bx){
+  // below the "Blessing" heading
+  const X=Math.round(bx-115),Y=793,W=230,H=215, c=document.createElement('canvas'); c.width=W; c.height=H;
+  const g=c.getContext('2d'); g.drawImage(...src(img,X,Y,W,H),0,0,W,H); const d=g.getImageData(0,0,W,H).data;
+  const on=(i,j)=>{const k=(j*W+i)*4,r=d[k],gg=d[k+1],b=d[k+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);return mx>110&&(mx-mn)/mx>0.4;};
+  const rows=new Array(H).fill(0),cols=new Array(W).fill(0); for(let j=0;j<H;j++)for(let i=0;i<W;i++)if(on(i,j)){rows[j]++;cols[i]++;}
+  const R=rows.map((n,j)=>n>=4?j:-1).filter(v=>v>=0), C=cols.map((n,i)=>n>=4?i:-1).filter(v=>v>=0);
+  if(R.length<2||C.length<2)return [Math.round(bx-88),788,175,196];
+  const t=R[0],b=R[R.length-1],l=C[0],r=C[C.length-1];
+  if(b-t<110||b-t>212||r-l<100||r-l>215)return [Math.round(bx-88),788,175,196];
+  return [X+l-5,Y+t-5,r-l+11,b-t+11];
+}
 function snapName(t,LIST){ if(!t)return null; const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), a=L(t); if(a.length<3)return null;
   // a long name can wrap onto a second line that the reading misses ("Intimidating" of "Intimidating Presence"):
   // a clear start of exactly one name is enough
@@ -1190,7 +1223,7 @@ async function processRelic(img){
     const fix=t=>t.replace(/\s*\n\s*/g,' ').replace(/(\[[A-Za-z ]+?)[!|]{2}/g,'$1l]').replace(/[|(\[]([A-Z][a-z]+(?: [A-Z][a-z]+)?)[|!)\]]/g,'[$1]').replace(/\s+([.,%)])/g,'$1').trim();
     const junk=t=>t.split(/\s+/).filter(w=>w&&!/^[\[(]?[A-Za-z][a-z']*[\])]?[.,:;]?$|^[\[(]?[A-Z][A-Za-z.]*[\])]?[.,]?$|^[+-]?\d+%?[).,]?$|^\(stacks$|^\d+%\)\.?$/.test(w)).length;
     const r1=fix((await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text), r2=fix((await worker.recognize(crop(img,1455,605,425,190,3,'bw'))).data.text);
-    relic.desc=junk(r2)<junk(r1)?r2:r1; }
+    relic.desc=fixEffects(junk(r2)<junk(r1)?r2:r1); }
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
   await readChampDetails(img); await heroFromHeader(img,'Relic');
@@ -1217,7 +1250,7 @@ async function processBlessing(img){
   bless.none=!bless.name&&!/[A-Za-z]{4,}/.test(bRaw);
   bless.doubt=!bless.name&&!bless.none; if(!bless.name&&!bless.none)bless.name=bRaw;
   await worker.setParameters({tessedit_pageseg_mode:'6'});
-  bless.img=cropURL(img,Math.round(bx-88),788,175,196); await readChampDetails(img); await heroFromHeader(img,'Skills');
+  bless.img=cropURL(img,...blessBox(img,bx)); await readChampDetails(img); await heroFromHeader(img,'Skills');
   document.getElementById('bDrop').style.display='none'; document.getElementById('bErr').style.display='none';
   document.getElementById('bView').style.display='flex'; document.getElementById('bImg').src=bless.img; document.getElementById('bName').value=bless.name;
   refreshBlessNote();
@@ -1654,7 +1687,7 @@ function applyHero(el,txt,stars,pink,gold){
 }
 // is a substat row of the item window blank (no light text pixels anywhere on it)?
 function rowBlank(img,i){
-  const c=crop(img,20,[170,202,235,268][i]-14,460,28,1), g=c.getContext('2d'), d=g.getImageData(0,0,c.width,c.height).data; let n=0;
+  const c=crop(img,20,rowYs(img)[i]-14,460,28,1), g=c.getContext('2d'), d=g.getImageData(0,0,c.width,c.height).data; let n=0;
   for(let k=0;k<d.length;k+=4){ if(d[k]*.3+d[k+1]*.59+d[k+2]*.11>150)n++; }
   return n<c.width*c.height*0.004;
 }
@@ -1663,10 +1696,26 @@ const SUBMAX={'ATK%':40,'HP%':40,'DEF%':40,'SPD':40,'C.RATE':40,'C. RATE':40,'C.
 /* 1 and 7 look alike to the text reader in this font ("11" read as "17"), but not in shape: a 1 is a narrow stem
    (width ≈ 0.4 of its height), a 7 is wide (≈ 0.7). Measure the white digits of each substat value and correct
    the reading where the shapes say otherwise — only when the number of shapes matches the number of characters */
+/* where the four substat lines really are in this item window. The window can sit a few pixels higher or lower than
+   expected (screen shape, window frame); every reading of a line is then cut through the middle of the text. Find
+   the lines of white text in the window and move the expected lines onto them — like the icon frame snap */
+const ROWY=[170,202,235,268];
+function rowYs(img){
+  if(img._rowys)return img._rowys;
+  const X=30,Y=130,W=455,H=185, c=document.createElement('canvas'); c.width=W; c.height=H;
+  const g=c.getContext('2d'); g.drawImage(...src(img,X,Y,W,H),0,0,W,H); const d=g.getImageData(0,0,W,H).data;
+  const on=[]; for(let y=0;y<H;y++){let n=0;for(let x=0;x<W;x++){const k=(y*W+x)*4;if(Math.min(d[k],d[k+1],d[k+2])>150)n++;} on.push(n>=4);}
+  const bands=[]; for(let y=0;y<H;){ if(!on[y]){y++;continue;} let t=y,b=y; while(y<H&&(on[y]||(on[y+1]&&y+1<H)||(on[y+2]&&y+2<H))){ if(on[y])b=y; y++; }
+    const h=b-t+1; if(h>=8&&h<=30)bands.push(Y+(t+b)/2); }
+  const offs=bands.map(c=>{ let best=null; for(const r of ROWY){ const o=c-r; if(Math.abs(o)<=16&&(best===null||Math.abs(o)<Math.abs(best)))best=o; } return best; }).filter(o=>o!==null).sort((a,b)=>a-b);
+  const off=offs.length?offs[offs.length>>1]:0;
+  const ys=ROWY.map(r=>{ const e=r+off; let best=e,bd=7; for(const c of bands){ if(Math.abs(c-e)<bd){bd=Math.abs(c-e);best=c;} } return Math.round(best); });
+  img._rowys=ys; return ys;
+}
 function fix17(img,it){
   (it.subs||[]).forEach((sub,i)=>{ if(i>3||!sub.v||!/[17]/.test(sub.v))return;
     // a taller window than the row, then the text band inside it: the digits must be whole (a 7 cut at the top is a stem)
-    const y=[170,202,235,268][i], W=705, H=150, c=document.createElement('canvas'); c.width=W; c.height=H;
+    const y=rowYs(img)[i], W=705, H=150, c=document.createElement('canvas'); c.width=W; c.height=H;
     const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(...src(img,250,y-25,235,50),0,0,W,H); const d=g.getImageData(0,0,W,H).data;
     const wh=(x,yy)=>{const k=(yy*W+x)*4;return Math.min(d[k],d[k+1],d[k+2])>140;};
     const rowOn=[]; for(let yy=0;yy<H;yy++){let n=0;for(let x=0;x<W;x++)if(wh(x,yy))n++; rowOn.push(n>0);}
@@ -1679,7 +1728,8 @@ function fix17(img,it){
         if(b-t>(bb-bt)*0.8)runs.push((x-x0)/(b-t+1)); x0=-1; } }
     const ch=sub.v.split(''); if(runs.length!==ch.length)return;
     let changed=false; const out=ch.map((q,j)=>{ if(q==='7'&&runs[j]<0.47){changed=true;return '1';} if(q==='1'&&runs[j]>0.58){changed=true;return '7';} return q; }).join('');
-    if(changed&&subPossible(sub.s,out,false)){ sub.v=out; }
+    // the shapes agree with what another reading saw (the digits pass): that settles it
+    if(changed&&subPossible(sub.s,out,false)){ sub.v=out; if(out===sub.nv)sub.sure=true; }
   });
 }
 function subPossible(stat,v,glyph){ const pct=/%$/.test(v), n=parseInt(v,10); if(isNaN(n))return false;
@@ -1716,7 +1766,7 @@ async function rowCheck(img,it){
     // if exactly one possible value was seen; otherwise ask to check
     { const impV=sub.v&&!subPossible(sub.s,sub.v), impG=sub.g&&!subPossible(sub.s,sub.g,true);
       if(impV||impG){
-        const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+        const t=(await worker.recognize(crop(img,250,rowYs(img)[i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
         const r=t?splitGlyph(t,sub.s):null, seen=[{v:sub.nv,g:sub.ng},r||{}];
         const pick=(key,glyph)=>{ const u=[...new Set(seen.map(c=>c[key]).filter(x=>x&&/^\d+%?$/.test(x)&&subPossible(sub.s,x,glyph)))]; return u.length===1?u[0]:null; };
         let ok=true;
@@ -1724,13 +1774,16 @@ async function rowCheck(img,it){
         if(impG){ const g=pick('g',true); if(g)sub.g=g; else ok=false; }
         sub.sure=ok?undefined:false; if(!ok)continue; } }
     const dig=sub.nv!==undefined&&/^\d+%?$/.test(sub.nv)?sub.nv:null, cur=sub.v||'';
-    if(dig!==null&&dig===cur)continue;                                                   // first and digits passes agree
-    const t=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+    if(dig!==null&&dig===cur&&sub.sure!==false)continue;                                 // first and digits passes agree
+    const t=(await worker.recognize(crop(img,250,rowYs(img)[i]-17,235,34,3,'inv'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
     const r=t?splitGlyph(t,sub.s):null; if(!r||!/^\d+%?$/.test(r.v||''))continue; const row=r.v;
-    if(row===cur)continue;
+    // the line read alone agrees with the value kept so far (and its glyph): a value only guessed from the digits pass
+    // (first reading garbled), or one the digits pass got impossibly wrong ("11+3" read as "114+3"), is now confirmed
+    // by a second, separate reading
+    if(row===cur){ if(sub.sure===false&&(dig===cur||(sub.nv&&!subPossible(sub.s,sub.nv)))&&(r.g||'')===(sub.g||''))sub.sure=true; continue; }
     if(dig!==null&&dig===row){                                                           // outvoted 2:1 — but those two readings
       // use similar crops, so a fourth, differently prepared reading decides: with the first → a tie, ask; else accept
-      const t4=(await worker.recognize(crop(img,250,[170,202,235,268][i]-17,235,34,4,'bw2'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
+      const t4=(await worker.recognize(crop(img,250,rowYs(img)[i]-17,235,34,4,'bw2'))).data.text.replace(/\s+/g,'').replace(/MAX$/,'');
       const r4=t4?splitGlyph(t4,sub.s):null, v4=r4&&r4.v;
       if(v4===cur){ sub.sure=false; continue; }
       sub.v=row; sub.g=sub.ng||sub.g; sub.sure=v4===row?true:false; continue; }
@@ -1738,6 +1791,10 @@ async function rowCheck(img,it){
     // if both are possible, nobody can tell — ask to check
     if(/^\d+%?$/.test(cur)&&(cur.includes(row)||row.includes(cur))){ const okC=subPossible(sub.s,cur), okR=subPossible(sub.s,row);
       if(okC&&!okR)continue; if(okR&&!okC){ sub.v=row; continue; } }
+    // the digits pass gave something no item shows ("04", "11%" for SPD) and the line reading only lost a digit of the
+    // kept value ("4" of "54"): nothing actually contradicts the kept value
+    { const valid=x=>/^(?:[1-9]\d*|0)%?$/.test(x||'')&&subPossible(sub.s,x);
+      if(valid(cur)&&!valid(dig)&&row&&cur.replace('%','').endsWith(row.replace('%',''))&&row.length<cur.length)continue; }
     sub.sure=false;                                                                       // no majority → ask to check
   } } finally { await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''}); }
 }
