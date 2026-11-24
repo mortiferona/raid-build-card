@@ -1139,6 +1139,45 @@ function blessBox(img,bx){
   if(b-t<110||b-t>212||r-l<100||r-l>215)return [Math.round(bx-88),788,175,196];
   return [X+l-5,Y+t-5,r-l+11,b-t+11];
 }
+/* relic texts: what a relic does is the same text for every copy of it — so once the relic's name is confirmed, its
+   text comes from here instead of the reading (no spelling mistakes possible). Two safety rules: the reading must be
+   close to the stored text, and its numbers are kept (if a relic's numbers ever differ, the reading's numbers win).
+   A relic not listed here keeps its reading, with the [effect] names repaired. Sources: in-game text read from real
+   screenshots; HellHades relic pages for the rest. */
+const RELIC_DESC={
+ "Lens of Intangibility":"Wearer ignores 10% of a target's DEF. At the start of a Round, places a [Perfect Veil] buff on the wearer for 2 turns. While under [Veil] or [Perfect Veil], wearer ignores an additional 5% DEF.",
+ "Irethi Coronet":"Wearer's damage increases by 1% each time they place a debuff (stacks up to 30%).",
+ "Aspect of Siroth":"When wearer receives fatal damage, reduces it by 50% of their Turn Meter and then fully reduces their Turn Meter. Cooldown: 1 turn.",
+ "Golden Elixir":"Wearer is instantly healed by 10% when their HP drops below 50%.",
+ "Wand of Submission":"Wearer has a 25% chance to reflect [Stun], [Sleep], [Fear], [True Fear], [Freeze], [Provoke], [Petrification], and [Sheep] debuffs back at the producer. This effect cannot be resisted.",
+ "Malefic Talon":"Wearer has a 20% chance to deal 10% more damage when attacking.",
+ "Molten Deathbell":"Wearer's Turn Meter increases by 10% when applying [Stun], [Sleep], [Fear], [True Fear], [Freeze], [Provoke], [Petrification], and [Sheep] debuffs to enemies. Occurs once per turn.",
+ "Scroll of the Unseen":"Wearer's damage increases by 1% each time any other Champion takes a turn when the wearer is under a [Veil] or [Perfect Veil] buff (stacks up to 30%). Damage bonus resets after the wearer takes a turn.",
+ "Perched Shadow":"Wearer has a 10% chance to receive an Extra Turn when using their default skill, if at least 1 active skill is on cooldown.",
+ "Stormcaller":"Wearer has a 20% chance of placing a [Stormcall] buff on themselves whenever they land a critical hit.",
+ "Chronocube":"Wearer has a 50% chance to take 2 turns in a row. If this effect activates, wearer skips the next turn. Occurs only once per battle.",
+ "Gorecrescent":"Wearer's next attack after killing an enemy deals 20% more damage.",
+ "Hand of Uncreation":"Wearer reduces the chance of debuff application, buff removal or steal effects, Turn Meter reduction effects, and increase skill cooldown effects by 10%.",
+ "Orb of Transfixion":"Wearer has a 10% chance to steal 1 random buff when attacking a target. This effect cannot be resisted. Occurs once per skill.",
+ "Diadem of Undeath":"Wearer's DEF increases by 1% for each ally under an [Ally Protection] buff placed by them.",
+ "Tempus Sanguinis":"Wearer's Turn Meter reduction effects are boosted by 15%.",
+ "Hallowed Hilt":"Whenever the wearer heals an ally with an active skill, has a 25% chance to place the [Fervor] buff on the ally for 1 turn.",
+ "Gilded Dragonstone":"Wearer's DEF increases by 1% each time they receive damage (stacks up to 10%).",
+ "Demonic Effigy":"Wearer's Turn Meter increases by 10% whenever one of their allies dies.",
+ "Unholy Grail":"Wearer deals 2% more damage if under any buffs.",
+ "Mask of Rage":"Wearer receives 5% less damage from enemies under a [Provoke] debuff.",
+ "Journal of Necrotos":"Wearer's heals and Turn Meter increase effects applies to allies are boosted by 15%.",
+ "Rod of Blasphemy":"Wearer receives 2% less damage if under any debuffs."
+};
+function relicText(name,read){
+  const ref=RELIC_DESC[name]; if(!ref||!read)return read;
+  const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), nums=x=>(x.match(/\d+(?:\.\d+)?/g)||[]);
+  const a=L(read), b=L(ref); if(!a||lev(a,b)/b.length>0.35)return read;          // not the stored text: keep the reading
+  const nr=nums(read), nf=nums(ref);
+  if(nr.join()===nf.join())return ref;
+  if(nr.length===nf.length){ let i=0; return ref.replace(/\d+(?:\.\d+)?/g,()=>nr[i++]); }   // same text, the reading's numbers
+  return ref;                                                                     // a number lost in the reading: stored one
+}
 function snapName(t,LIST){ if(!t)return null; const L=x=>x.toLowerCase().replace(/[^a-z]/g,''), a=L(t); if(a.length<3)return null;
   // a long name can wrap onto a second line that the reading misses ("Intimidating" of "Intimidating Presence"):
   // a clear start of exactly one name is enough
@@ -1225,6 +1264,7 @@ async function processRelic(img){
     const junk=t=>t.split(/\s+/).filter(w=>w&&!/^[\[(]?[A-Za-z][a-z']*[\])]?[.,:;]?$|^[\[(]?[A-Z][A-Za-z.]*[\])]?[.,]?$|^[+-]?\d+%?[).,]?$|^\(stacks$|^\d+%\)\.?$/.test(w)).length;
     const r1=fix((await worker.recognize(crop(img,1455,605,425,190,2,'inv'))).data.text), r2=fix((await worker.recognize(crop(img,1455,605,425,190,3,'bw'))).data.text);
     relic.desc=fixEffects(junk(r2)<junk(r1)?r2:r1); }
+  relic.desc=relicText(relic.name,relic.desc);
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
   relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
   await readChampDetails(img); await heroFromHeader(img,'Relic');
