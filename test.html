@@ -1118,6 +1118,7 @@ function fixEffects(t){
   const near=(x,cands,q=0.4)=>{ const X=x.replace(/\s+/g,''); const sc=cands.map(c=>{const C=c.replace(/\s+/g,''); return [lev(X,C)/C.length,c];}).sort((a,b)=>a[0]-b[0]);
     return sc.length&&sc[0][0]<=q&&(sc.length<2||sc[1][0]>sc[0][0]+0.03)?sc[0][1]:null; };
   // "[xxx]" — the name itself
+  t=t.replace(/[{(|\[]([A-Z][A-Za-z. ]{1,28}?)[\]}|)]/g,(m,x)=>{ const e=near(x,EFFECTS); return e?'['+e+']':m; });   // a bracket read as { ( |
   t=t.replace(/\[([^\[\]]{2,30})\]/g,(m,x)=>{ const e=near(x,EFFECTS); return e?'['+e+']':m; });
   // "[xxx [" — no closing bracket before the next one: a name glued to "] or" / "] and" / "],"
   t=t.replace(/\[([^\[\]]{2,30}?)\s*(?=\[)/g,(m,x)=>{ const cands=[]; for(const e of EFFECTS)for(const j of ['] or ','] and ','], '])cands.push(e+j.trim());
