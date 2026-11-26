@@ -974,6 +974,10 @@ function rowCells(words){
 }
 function rowOk(c){ if(!c[10]||!c[0])return false; let sum=0; for(let j=0;j<10;j++){const n=tnum(c[j]); if(n===null)continue; if(isNaN(n))return false; sum+=n;}
   const t=tnum(c[10]); return !isNaN(t)&&t!==null&&Math.abs(sum-t)<0.6; }
+/* every value the Blessing column of Total Stats can hold: the awakening stat bonuses summed for 1-6 stars, for each rarity */
+function blessCellOk(ri,v){ if(!v)return true; const x=tnum(v); if(x===null||isNaN(x))return false; const set=new Set();
+  Object.values(BLESS_STATS).forEach(t=>{ for(let s=1;s<=6;s++){ const val=[s>=1?t[0]+(s>=4?1000:0):0,s>=2?t[1]:0,s>=3?t[2]:0,s>=6?t[5]:0,0,s>=4?t[3]:0,s>=5?t[4]:0,s>=5?t[4]:0,0][ri]; if(val)set.add(val); } });
+  return set.has(x); }
 async function readRow(img,y){
   const out=[];
   for(const mode of ['inv','bw','bw2']){
@@ -1000,6 +1004,8 @@ async function readRow(img,y){
       for(const base of [...out,m0]) for(let j=0;j<10;j++){ const cand=new Set(out.map(o=>o[j]).filter(Boolean)); const c=base[j];
         if(swaps&&c) for(let q=0;q<c.length;q++) for(const r of (SW[c[q]]||'')) cand.add(c.slice(0,q)+r+c.slice(q+1));
         for(const v of cand){ if(v===base[j])continue; const try_=base.slice(); try_[j]=v; if(rowOk(try_))fixes.add(JSON.stringify(try_)); } } } }
+  // several fixes add up: the Blessing column can only hold the awakening bonuses (a closed set per stat) — keep the fix that makes it one
+  if(fixes.size>1){ const ok=[...fixes].filter(f=>blessCellOk(TROWY.indexOf(y),JSON.parse(f)[7])); if(ok.length===1)return {cells:JSON.parse(ok[0]),ok:true}; }
   if(fixes.size===1) return {cells:JSON.parse([...fixes][0]),ok:true};
   // the parts agree but the total doesn't fit: read the Total cell alone, larger, digits only
   if(!fixes.size){ await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789,.%'});
@@ -1076,13 +1082,13 @@ document.addEventListener('input',e=>{
 });
 /* "to check": click a marked field and the piece of the screenshot it was read from opens right under it, with the line
    marked — no need to go back to the screenshots folder to see which number it really is */
-function peekShow(anchor,url){ peekHide(); const p=document.createElement('div'); p.id='peek';
+function peekShow(anchor,url,wide){ peekHide(); const p=document.createElement('div'); p.id='peek';
   p.style.cssText='position:absolute;z-index:50;background:#0b0f18;border:2px solid #ffcf4a;border-radius:8px;padding:4px;box-shadow:0 6px 24px #000a;cursor:pointer';
-  p.innerHTML=`<img src="${url}" style="display:block;max-width:min(560px,92vw)"><div style="font:12px system-ui;color:#c9b98f;padding:3px 2px 0">from your screenshot · click to close</div>`;
-  const r=anchor.getBoundingClientRect(); p.style.left=Math.max(4,Math.min(window.scrollX+r.left,window.scrollX+document.documentElement.clientWidth-580))+'px'; p.style.top=(window.scrollY+r.bottom+6)+'px';
+  p.innerHTML=`<img src="${url}" style="display:block;max-width:${wide?'calc(100vw - 32px)':'min(560px,92vw)'}"><div style="font:12px system-ui;color:#c9b98f;padding:3px 2px 0">from your screenshot · click to close</div>`;
+  const r=anchor.getBoundingClientRect(); p.style.left=(wide?window.scrollX+8:Math.max(4,Math.min(window.scrollX+r.left,window.scrollX+document.documentElement.clientWidth-580)))+'px'; p.style.top=(window.scrollY+r.bottom+6)+'px';
   p.addEventListener('mousedown',e=>{e.preventDefault();peekHide();}); document.body.appendChild(p); }
 function peekHide(){ const p=document.getElementById('peek'); if(p)p.remove(); }
-function markedCrop(img,x,y,w,h,mark){ const k=1.25, c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
+function markedCrop(img,x,y,w,h,mark,k=1.25){ const c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
   const g=c.getContext('2d'); g.drawImage(...src(img,x,y,w,h),0,0,c.width,c.height);
   if(mark){ g.strokeStyle='#ffcf4a'; g.lineWidth=3; g.strokeRect((mark[0]-x)*k,(mark[1]-y)*k,mark[2]*k,mark[3]*k); }
   return c.toDataURL('image/jpeg',0.92); }
@@ -1090,7 +1096,8 @@ document.addEventListener('focusin',e=>{
   const inp=e.target; if(!(inp instanceof HTMLInputElement)||!inp.classList.contains('bad')&&!(inp.closest('#tTbl tr.bad'))){ peekHide(); return; }
   const tr=inp.closest('#tTbl tr');
   if(tr){ if(!totals.img||!tr.classList.contains('bad'))return peekHide(); const y=TROWY[+tr.dataset.i];
-    return peekShow(inp,markedCrop(totals.img,20,y-30,1880,60,[20+2,y-26,1876,52])); }
+    const j=+inp.dataset.j, x0=j?TRIGHT[j-1]+6:20, x1=TRIGHT[j]+6;
+    return peekShow(inp,markedCrop(totals.img,20,y-30,1880,60,[x0,y-26,x1-x0,52],2),true); }
   const el=inp.closest('.slot'); if(!el||!el._img)return peekHide();
   let mark=null; const row=inp.closest('.row.sub');
   if(row){ const i=[...el.querySelectorAll('.row.sub')].indexOf(row), ys=rowYs(el._img), k=(ys[i]-ROWY[i]); mark=[30,ys[i]-15,450,31]; }
