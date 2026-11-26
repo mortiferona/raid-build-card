@@ -1387,7 +1387,10 @@ function gemRows(px,H){
   let best=null,gap=0; cur=null;
   for(let y=start;y<=H;y++){ if(cnt[y]>=6){ if(!cur)cur=[y,y]; cur[1]=y; gap=0; } else if(cur&&++gap>3){ if(!best||cur[1]-cur[0]>best[1]-best[0])best=cur; cur=null; } }
   if(cur&&(!best||cur[1]-cur[0]>best[1]-best[0]))best=cur;
-  return best&&best[1]-best[0]>=25?best:null;
+  if(!best||best[1]-best[0]<25)return null;
+  // a triangle's tip or a round gem's top edge has only a few coloured pixels: grow the band while any colour is left
+  let t=best[0],b=best[1]; for(let k=0;k<25&&t-1>=start&&cnt[t-1]>=1;k++)t--; for(let k=0;k<25&&b+1<=H&&cnt[b+1]>=1;k++)b++;
+  return [t,b];
 }
 function gemBox(img,px){
   const H=Math.floor(img.naturalHeight*1920/img.naturalWidth)-1, R=img._rmap;
@@ -1397,7 +1400,7 @@ function gemBox(img,px){
   if((!best||best[1]>=H-2)&&R&&img._src){ const S=img._src, sp=pxData(S), k=1920/S.naturalWidth, H2=Math.floor((S.naturalHeight-R.ay)/R.s)-1;
     const b2=gemRows((x,y)=>sp((R.ax+R.s*x)*k,(R.ay+R.s*y)*k),H2); if(b2){best=b2;Hb=H2;} }
   if(!best)return [1455,965,430,90];
-  const top=Math.max(840,best[0]-10), bot=Math.min(Hb,best[1]+10); return [1455,top,430,bot-top];
+  const top=Math.max(840,best[0]-14), bot=Math.min(Hb,best[1]+14); return [1455,top,430,bot-top];
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
