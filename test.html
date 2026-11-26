@@ -1368,8 +1368,8 @@ async function heroFromHeader(img,from){
 }
 /* the gemstone row under the relic: find it by colour (rows full of saturated pixels below the Edit button)
    instead of a fixed place, so a panel shifted up or down still gets whole gems */
-function gemBox(img,px){
-  const H=Math.floor(img.naturalHeight*1920/img.naturalWidth)-1, cnt={};
+function gemRows(px,H){
+  const cnt={};
   for(let y=840;y<=H;y++){ let n=0; for(let x=1460;x<1880;x+=2){const p=px(x,y); if(!p||p[0]===undefined)continue; const mx=Math.max(...p),mn=Math.min(...p); if(mx>120&&mx-mn>80)n++;} cnt[y]=n; }
   // the Edit button's top and bottom borders are thin rows that are almost all gold: search below the second one
   const runs=[]; let cur=null;
@@ -1380,8 +1380,17 @@ function gemBox(img,px){
   let best=null,gap=0; cur=null;
   for(let y=start;y<=H;y++){ if(cnt[y]>=6){ if(!cur)cur=[y,y]; cur[1]=y; gap=0; } else if(cur&&++gap>3){ if(!best||cur[1]-cur[0]>best[1]-best[0])best=cur; cur=null; } }
   if(cur&&(!best||cur[1]-cur[0]>best[1]-best[0]))best=cur;
-  if(!best||best[1]-best[0]<25)return [1455,965,430,90];
-  const top=Math.max(840,best[0]-10), bot=Math.min(H,best[1]+10); return [1455,top,430,bot-top];
+  return best&&best[1]-best[0]>=25?best:null;
+}
+function gemBox(img,px){
+  const H=Math.floor(img.naturalHeight*1920/img.naturalWidth)-1, R=img._rmap;
+  let best=gemRows(px,H), Hb=H;
+  // gems touching the bottom of the normalized picture were cut off by it; the right side is cropped from the
+  // original screenshot (src() uses _rmap there), so look again in the original, down to its real bottom
+  if((!best||best[1]>=H-2)&&R&&img._src){ const S=img._src, sp=pxData(S), k=1920/S.naturalWidth, H2=Math.floor((S.naturalHeight-R.ay)/R.s)-1;
+    const b2=gemRows((x,y)=>sp((R.ax+R.s*x)*k,(R.ay+R.s*y)*k),H2); if(b2){best=b2;Hb=H2;} }
+  if(!best)return [1455,965,430,90];
+  const top=Math.max(840,best[0]-10), bot=Math.min(Hb,best[1]+10); return [1455,top,430,bot-top];
 }
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
