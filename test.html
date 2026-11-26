@@ -1366,6 +1366,23 @@ async function heroFromHeader(img,from){
   const m=t.match(/([A-Za-z][A-Za-z'\- ]*?)\s*Lvl\.?\s*(\d{1,2})/i); if(!m)return;
   voteHero(m[1].trim(),m[2],stars,from,starsPink,starsGold);
 }
+/* the gemstone row under the relic: find it by colour (rows full of saturated pixels below the Edit button)
+   instead of a fixed place, so a panel shifted up or down still gets whole gems */
+function gemBox(img,px){
+  const H=Math.floor(img.naturalHeight*1920/img.naturalWidth)-1, cnt={};
+  for(let y=840;y<=H;y++){ let n=0; for(let x=1460;x<1880;x+=2){const p=px(x,y); if(!p||p[0]===undefined)continue; const mx=Math.max(...p),mn=Math.min(...p); if(mx>120&&mx-mn>80)n++;} cnt[y]=n; }
+  // the Edit button's top and bottom borders are thin rows that are almost all gold: search below the second one
+  const runs=[]; let cur=null;
+  for(let y=840;y<=H;y++) if(cnt[y]>60){ if(cur&&y-cur[1]<=1)cur[1]=y; else { if(cur)runs.push(cur); cur=[y,y]; } }
+  if(cur)runs.push(cur);
+  const thin=runs.filter(r=>r[1]-r[0]<=8), start=thin.length>=2?thin[1][1]+3:900;
+  // the gems: the longest band of rows with some colour in them (2 gems give few coloured pixels per row)
+  let best=null,gap=0; cur=null;
+  for(let y=start;y<=H;y++){ if(cnt[y]>=6){ if(!cur)cur=[y,y]; cur[1]=y; gap=0; } else if(cur&&++gap>3){ if(!best||cur[1]-cur[0]>best[1]-best[0])best=cur; cur=null; } }
+  if(cur&&(!best||cur[1]-cur[0]>best[1]-best[0]))best=cur;
+  if(!best||best[1]-best[0]<25)return [1455,965,430,90];
+  const top=Math.max(840,best[0]-10), bot=Math.min(H,best[1]+10); return [1455,top,430,bot-top];
+}
 async function processRelic(img){
   const px=pxData(img); await worker.setParameters({tessedit_pageseg_mode:'7'});
   { const clean=t=>t.replace(/[^A-Za-z' \-]/g,'').replace(/\s+/g,' ').trim().replace(/\bl(?=[^aeiouy\s])/g,'I');   // capital I read as l
@@ -1406,7 +1423,7 @@ async function processRelic(img){
     relic.desc=fixEffects(junk(r2)<junk(r1)?r2:r1); }
   relic.desc=relicText(relic.name,relic.desc);
   relic.rarity=rarityByColor(avgColor(px,1460,298,1578,328)); relic.stars=starsByTips(px,1455,1600,330,375);
-  relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,1455,965,430,90);
+  relic.img=cropURL(img,1585,300,180,220); relic.sets=cropURL(img,...gemBox(img,px));
   await readChampDetails(img); await heroFromHeader(img,'Relic');
   document.getElementById('rDrop').style.display='none'; document.getElementById('rErr').style.display='none';
   document.getElementById('rView').style.display='flex'; document.getElementById('rImg').src=relic.img;
