@@ -592,8 +592,8 @@ async function identifySlot(img,orig){
 function loadImg(f){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f);});}
 function bigNote(title,text){ const n=document.getElementById('bignote'); if(!title){ n.style.display='none'; n.innerHTML=''; return; }
   n.innerHTML=`<b>${title}</b>${text}`; n.style.display='block'; n.scrollIntoView({behavior:'smooth',block:'center'}); }
-function nag(title,text){ const old=document.getElementById('nag'); if(old)old.remove();
-  const o=document.createElement('div'); o.id='nag'; o.innerHTML=`<div class="bignote"><b>${title}</b>${text}<br><button>OK, one champion at a time</button></div>`;
+function nag(title,text,btn){ const old=document.getElementById('nag'); if(old)old.remove();
+  const o=document.createElement('div'); o.id='nag'; o.innerHTML=`<div class="bignote"><b>${title}</b>${text}<br><button>${btn||'OK, one champion at a time'}</button></div>`;
   const close=()=>o.remove(); o.querySelector('button').addEventListener('click',close); o.addEventListener('click',e=>{if(e.target===o)close();});
   document.addEventListener('keydown',function k(e){ if(e.key==='Escape'){close();document.removeEventListener('keydown',k);} });
   document.body.appendChild(o); o.querySelector('button').focus(); }
@@ -1563,7 +1563,35 @@ function buildCard(){
 }
 function fitStage(){const st=document.getElementById('stage'),c=document.getElementById('card');if(!c)return;
   const k=Math.min(1,(window.innerWidth-48)/c.offsetWidth); st.style.transform=`scale(${k})`; st.style.width=c.offsetWidth+'px'; st.style.height=(c.offsetHeight*k)+'px';}
+/* manual edits are checked too: a value no item can roll, or one that breaks a Total Stats check the screenshot
+   values passed, is marked red and stops the preview — the card shows only what the screenshots can back up */
+function partsOf(it,st,ui){ const out=[]; if(!it)return out;
+  if(ui){ if(it.ms===st)out.push({v:it.mv}); if(it.as===st)out.push({v:it.av}); it.subs.forEach(x=>{ if(x.s===st){ out.push({v:x.v}); if(x.g)out.push({v:x.g}); } }); }
+  else { if(it.main&&it.main.s===st)out.push({v:it.main.v}); if(it.asc&&it.asc.s===st)out.push({v:it.asc.v}); (it.subs||[]).forEach(x=>{ if(x.s===st){ out.push({v:x.v}); if(x.g)out.push({v:x.g}); } }); }
+  return out; }
+function statFits(st,items,ui){ const row=totals.rows&&totals.rows[TROWS.indexOf(st)]; if(!row||!row.ok)return null;
+  const n=v=>{const m=String(v||'').replace(/,/g,'').match(/^\+?(\d+)%?$/);return m?+m[1]:null;}; const col=n(row.cells[1])||0;
+  let flat=0,pct=0,cnt=0; for(const it of items) for(const p of partsOf(it,st,ui)){ const x=n(p.v); if(x===null)return null; cnt++; if(/%$/.test(p.v))pct+=x; else flat+=x; }
+  if(['HP','ATK','DEF'].includes(st)){ const base=n(row.cells[0]); if(!base)return null; return Math.abs(flat+base*(pct+setPct(st))/100-col)<=Math.max(2,Math.ceil(cnt/2)); }
+  return flat+pct<=col; }
+function checkEdits(){
+  const els=SLOTS.map(sl=>document.querySelector(`.slot[data-slot="${sl}"]`)), ui=els.map(el=>el&&readSlot(el)), orig=SLOTS.map(sl=>state[sl]), probs=[];
+  els.forEach(el=>el&&el.querySelectorAll('.editbad').forEach(i=>{i.classList.remove('editbad','bad');}));
+  const mark=(el,inp,msg)=>{ inp.classList.add('editbad','bad'); probs.push(msg); };
+  // 1. a value no item can have
+  els.forEach((el,i)=>{ if(!el||!ui[i])return; el.querySelectorAll('.row.sub').forEach(r=>{ const st=r.querySelector('.f-ss').value, v=r.querySelector('.f-sv').value.trim(), g=r.querySelector('.f-sg').value.trim();
+    if(st&&v&&!subPossible(st,v))mark(el,r.querySelector('.f-sv'),`${SLOTS[i]}: ${st} ${v} — no item can roll that`); }); });
+  // 2. an edit that breaks a Total Stats check the screenshot values passed
+  if(totals.rows&&orig.every(Boolean)) for(const st of ['HP','ATK','DEF','C. RATE','C. DMG','RES','ACC']){
+    if(statFits(st,orig,false)!==true||statFits(st,ui.filter(Boolean),true)!==false)continue;
+    els.forEach((el,i)=>{ if(!el||!ui[i])return; const a=partsOf(ui[i],st,true).map(p=>p.v).join('|'), b=partsOf(orig[i],st,false).map(p=>p.v).join('|'); if(a===b)return;
+      el.querySelectorAll('.row.sub').forEach(r=>{ if(r.querySelector('.f-ss').value===st)[r.querySelector('.f-sv'),r.querySelector('.f-sg')].forEach(x=>x.classList.add('editbad','bad')); });
+      probs.push(`${SLOTS[i]}: ${st} — doesn't add up with Total Stats (Artifacts column) any more`); }); }
+  return probs; }
+// live: re-check a few moments after typing in an item
+let _ceT=null; document.addEventListener('input',e=>{ if(e.target.closest&&e.target.closest('.slot')){ clearTimeout(_ceT); _ceT=setTimeout(checkEdits,400); } });
 document.getElementById('btnPreview').addEventListener('click',()=>{ if(openConflicts().length)return;
+  const probs=checkEdits(); if(probs.length){ nag('These values can\'t be right',`<br>${probs.map(esc).join('<br>')}<br><br>They are marked red. Check them against your screenshot (click the field to see it).`,'OK, I\'ll fix it'); return; }
   document.getElementById('stage').innerHTML=buildCard(); document.getElementById('modal').style.display='block'; fitStage();});
 document.getElementById('btnClose').addEventListener('click',()=>{document.getElementById('modal').style.display='none';});
 window.addEventListener('resize',fitStage);
@@ -1609,9 +1637,19 @@ function handle(el,f){
 // Total Stats is the sum of what the nine items give (main stat, ascension, substats, glyphs) plus set bonuses, and
 // set bonuses only add. Items adding up to MORE than the column is a misread: mark those values "to check". Items
 // adding up to less with exactly one one-glyph swap (1/7, 0/8, 3/8, 5/6) making it exact: the column proves the fix.
+/* set bonuses to HP / ATK / DEF (% of Base Stats) — they are inside the Artifacts column of Total Stats.
+   fixed sets: [pieces per set, {stat:%}] and stack per full set; variable sets: {piece count: {stat:%}}, cumulative.
+   Source: ayumilove.net artifact and accessory guide (Sept 2026). */
+const SET_FIX={'life':[2,{HP:15}],'offense':[2,{ATK:15}],'defense':[2,{DEF:15}],'cruel':[2,{ATK:15}],'immortal':[2,{HP:15}],'divinelife':[2,{HP:15}],
+  'divineoffense':[2,{ATK:15}],'resilience':[2,{HP:10,DEF:10}],'fatal':[2,{ATK:15}],'fortitude':[2,{DEF:10}],'defiant':[2,{DEF:10}]};
+const SET_VAR={'stoneskin':{1:{HP:8},3:{DEF:15},5:{DEF:15},7:{HP:8}},'protection':{2:{HP:15}},'supersonic':{2:{HP:15}},'merciless':{1:{ATK:10},5:{ATK:15}},
+  'stonecleaver':{1:{ATK:10},5:{ATK:15}},'mercurial':{2:{HP:15}},'swiftparry':{5:{HP:10},7:{HP:15}}};
+function setPct(st){ const cnt={}; SLOTS.forEach(sl=>{const k=String((state[sl]||{}).set||'').toLowerCase().replace(/[^a-z]/g,''); if(k)cnt[k]=(cnt[k]||0)+1;});
+  let p=0; for(const [k,n] of Object.entries(cnt)){ if(SET_FIX[k]){const [need,b]=SET_FIX[k]; p+=Math.floor(n/need)*(b[st]||0);}
+    if(SET_VAR[k]) for(const [c,b] of Object.entries(SET_VAR[k])) if(n>=+c)p+=b[st]||0; } return p; }
 function crossItems(){
   if(!totals.rows||!totals.rows.length||!SLOTS.every(x=>state[x]))return;
-  const n=v=>{const m=String(v||'').match(/^\+?(\d+)%?$/);return m?+m[1]:0;}, SW={'0':'8','8':'03','3':'8','5':'6','6':'5','1':'7','7':'1'};
+  const n=v=>{const m=String(v||'').replace(/,/g,'').match(/^\+?(\d+)%?$/);return m?+m[1]:0;}, SW={'0':'8','8':'03','3':'8','5':'6','6':'5','1':'7','7':'1'};   // "19,815": thousands have a comma
   for(const st of ['C. RATE','C. DMG','RES','ACC']){ const row=totals.rows[TROWS.indexOf(st)]; if(!row||!row.ok)continue;
     const col=n(row.cells[1]); if(!row.cells[1]&&row.cells[10]!==row.cells[0])continue;
     const parts=[]; for(const sl of SLOTS){ const it=state[sl];
@@ -1637,7 +1675,7 @@ function crossItems(){
       if(it.main&&it.main.s===st)add(it.main,'v',sl); if(it.asc&&it.asc.s===st)add(it.asc,'v',sl);
       (it.subs||[]).forEach(x=>{ if(x.s===st){ add(x,'v',sl,1); if(x.g)add(x,'g',sl); } }); }
     if(doubt.length!==1)continue; const {o,sl}=doubt[0], cur=String(o.v), isP=/%$/.test(cur);
-    const tol=Math.max(2,Math.ceil(cnt/2)), calc=(f,p)=>f+base*p/100;
+    const tol=Math.max(2,Math.ceil(cnt/2)), sp=setPct(st), calc=(f,p)=>f+base*(p+sp)/100;
     const fits=[...new Set(o._alts)].filter(a=>a&&/^\d+%?$/.test(a)&&/%$/.test(a)===isP&&subPossible(st,a)).filter(a=>{
       const f=isP?flat:flat-n(cur)+n(a), p=isP?pct-n(cur)+n(a):pct; return Math.abs(calc(f,p)-col)<=tol; });
     if(fits.length===1){ o.v=fits[0]; o.sure=true; refill(sl); } }
