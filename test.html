@@ -1284,7 +1284,10 @@ async function readChampDetails(img){
     const cnt=new Array(470).fill(0); for(let x=15;x<470;x++)for(let y=top;y<=bot;y++)if(G(x,y))cnt[x]++;
     const ex=cnt.map((n,i)=>n>=60?i:-1).filter(v=>v>=0);
     if(ex.length&&bot-top>90&&bot-top<150){ const l=ex[0], r=ex.filter(v=>v-l<130).pop();
-      if(r-l>75&&r-l<120) portrait=cropURL(img,l+3,top+3,r-l-5,bot-top-5); } }
+      if(r-l>75&&r-l<120) portrait=cropURL(img,l+8,top+8,r-l-15,bot-top-15); } }   // inside the green frame
+  // no roster tile in sight (list scrolled, filtered or hidden): the champion's head from the middle of this champion
+  // screen, kept apart so a real roster tile from another screenshot still wins
+  if(!portrait&&!champ.face) champ.face=cropURL(img,770,100,380,470);
   Object.assign(champ,{role:/^(Attack|Defense|Support|HP)$/i.test(role)?role:champ.role||'',faction:fac||champ.faction||'',rarity:rar||champ.rarity||'',affinity:aff||champ.affinity||'',portrait:portrait||champ.portrait||''});
 }
 function starsByTips(px,x0,x1,y0,y1){ let top=null; for(let y=y0;y<y1&&top===null;y++)for(let x=x0;x<x1;x++){const [r,g,b]=px(x,y);if(r>200&&g>150&&b<90){top=y;break;}}
@@ -1441,7 +1444,7 @@ function buildCard(){
       <div style="flex:1;display:flex;align-items:center"><div class="rd">${esc(relic.desc)}</div></div><img class="sets" src="${relic.sets}">`:`<div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center"><b>Relic</b>not added yet</div>`;
   const blessBody=bless.name?`<div class="brow"><img src="${bless.img}"><div><div class="bl2">Blessing</div><div class="bn">${esc(bless.name)}</div><div class="bs">${bstars}</div></div></div>`
       :`<div class="brow"><div class="ph"></div><div><div class="bl2">Blessing</div><div class="bn" style="color:#7f8aa3;font-size:20px">${bless.none?'none yet':'not added yet'}</div><div class="bs">${bless.none?'':bstars}</div></div></div>`;
-  return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${champ.portrait?`<img src="${champ.portrait}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
+  return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${(champ.portrait||champ.face)?`<img src="${champ.portrait||champ.face}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
     <div class="row2">
