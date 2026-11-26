@@ -162,7 +162,7 @@ input[type=file]{display:none}
 .raw{margin-top:6px;font-size:11px;color:#5d6880;white-space:pre-wrap;display:none}
 .card .rpan .relic img.art{width:110px;height:132px}.card .rpan .rn{font-size:22px}.card .rpan .rd{font-size:14px;line-height:1.5;margin:10px 0 8px}
 .card .rpan .rs div{padding:4px 8px;min-width:54px}.card .rpan .rs b{font-size:15px}.card .rpan .sets{max-height:56px}
-.card .bsep{border-top:1px solid #232c3d;margin:14px 0 12px}
+.card .bsep{border-top:1px solid #232c3d;margin:16px 0 14px}
 .card .rpan .brow{gap:12px}.card .rpan .brow img{width:56px}.card .rpan .brow .ph{width:50px;height:56px}
 .card .rpan .brow .bn{font-family:Inter,system-ui,sans-serif;font-size:19px;letter-spacing:0}.card .rpan .brow .bs{font-size:15px;letter-spacing:1px;margin:0}
 .card .rpan .brow .bl2{font-family:Inter,system-ui,sans-serif;font-size:13px;letter-spacing:0;margin-top:2px}
@@ -1509,9 +1509,9 @@ function buildCard(){
   const lv=BI?[1,2,3,4,5,6].filter(k=>k<=bst).map(k=>`<div class="blx"><span>${k}★</span><em>${BI.L[k]?tag(BI.L[k]):'—'}</em><u>${starStat(k)}</u></div>`).join(''):'';
   const bonusChips=bonus?bonus.list.map(([n,v])=>`<span class="bc">${esc(n)} <b>+${esc(String(v))}</b></span>`).join(''):'';
   const hab=BI&&BLESS_HAB[bless.name]&&bst>=5?`<div class="bhab"><b>High Awakening Bonus:</b> ${tag(BLESS_HAB[bless.name])}</div>`:'';
-  const blessBody=bless.name?`<div class="bsep"></div><div class="brow"><img src="${bless.img}"><div><div class="bn">${esc(bless.name)} <span class="bs">${bstars}</span></div><div class="bl2">Blessing${BI?` · <span style="color:${rarCol[BI.r]}">${BI.r}</span>`:''}</div></div></div>
+  const blessBody=bless.name?`<div class="bsep"></div><div class="pt">Blessing</div><div class="brow"><img src="${bless.img}"><div><div class="bn">${esc(bless.name)} <span class="bs">${bstars}</span></div><div class="bl2">${BI?`<span style="color:${rarCol[BI.r]}">${BI.r}</span>`:''}</div></div></div>
       ${BI?`<div class="bdesc">${tag(BI.d)}</div>${hab}`:''}${bonusChips?`<div class="bbon">${bonusChips}</div>`:''}${lv?`<div class="blv">${lv}</div>`:''}${hi&&lv?`<div class="bnote">(…) = extra for ${R} Champions · totals above include it</div>`:''}`
-      :`<div class="bsep"></div><div class="brow"><div class="ph"></div><div><div class="bn" style="color:#7f8aa3">${bless.none?'No Blessing yet':'Blessing not added yet'} <span class="bs">${bless.none?'':bstars}</span></div></div></div>`;
+      :`<div class="bsep"></div><div class="pt">Blessing</div><div class="brow"><div class="ph"></div><div><div class="bn" style="color:#7f8aa3">${bless.none?'No Blessing yet':'Blessing not added yet'} <span class="bs">${bless.none?'':bstars}</span></div></div></div>`;
   return `<div class="card" id="card"><div class="ch"><div style="display:flex;gap:22px;align-items:center">${(champ.portrait||champ.face)?`<img src="${champ.portrait||champ.face}" style="height:150px;border-radius:8px;box-shadow:0 0 0 2px #c9a24a">`:''}<div>
     <div class="cn">${esc(name)}${stars?`<span class="cs">${stars}</span>`:''}</div>
     <div class="chips">${cChips}${lvl?`<span class="chip">Level ${esc(lvl)}</span>`:''}${setChips}</div></div></div>${headRight}</div>
